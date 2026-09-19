@@ -1,0 +1,62 @@
+# 科研助手 Agent — 一键部署（Docker Compose）
+#
+# 组成：
+#   web       — FastAPI 后端 + 前端静态页（/demo），宿主机端口 8000
+#   chromadb  — ChromaDB 0.4.x 向量库（REST，供知识库检索），宿主机端口 8001
+#
+# 启动：
+#   docker compose up -d --build
+# 然后访问 http://<服务器IP>:8000/demo （前端），API 在 /api，文档在 /docs
+#
+# 数据持久化：
+#   web    -> 命名卷 app-data（会话 memory.db / 追踪 traces.db / 笔记 / 知识库索引）
+#   chroma -> 命名卷 chroma-data（向量数据）
+# 备份：docker compose exec web python scripts/backup.py --out /backup
+#       （宿主机可用 volume 或 docker cp 取出）
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # 容器内通过服务名访问 ChromaDB（宿主机的 8001 是端口映射出口）
+      CHROMA_BASE_URL: http://chromadb:8000
+      APP_ENV: production
+    volumes:
+      - app-data:/app/data
+      - app-backups:/app/backups
+    depends_on:
+      - chromadb
+    restart: unless-stopped
+
+  chromadb:
+    # 0.4.x：与项目 REST 客户端（/api/v1/collections）兼容的版本
+    image: chromadb/chroma:0.4.24
+    ports:
+      - "8001:8000"
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /data
+      ANONYMIZED_TELEMETRY: "FALSE"
+    volumes:
+      - chroma-data:/data
+    restart: unless-stopped
+
+  redis:
+    # L2 热数据层：会话记忆双写 + 检索缓存 + 限流 + 排行榜
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  app-backups:
+  chroma-data:
+  redis-data:

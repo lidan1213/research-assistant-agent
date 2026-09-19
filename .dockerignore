@@ -1,0 +1,30 @@
+# 版本控制与 CI
+.git
+.gitignore
+.github
+
+# Python 缓存与虚拟环境
+__pycache__
+*.py[cod]
+*.egg-info
+.venv
+venv
+env
+
+# 密钥：不要把真实 .env 打进镜像层（运行时通过挂载/--env-file 注入）
+.env
+
+# 前端依赖（本项目无需）
+node_modules
+
+# 测试与缓存目录（CI 单独跑，不进镜像）
+tests
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# 数据：本地知识库（FAISS 索引 + 语料）较大，运行时用 volume 挂载
+data
+
+# 日志
+*.log

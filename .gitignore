@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.chroma-venv/
+venv/
+env/
+
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 数据与索引
+data/
+var/
+backups/
+*.faiss
+*.log
+*.db
+*.db-shm
+*.db-wal
+*.zip
+
+# 测试与缓存
+.pytest_cache/
+.test-cache/
+.test-tmp/
+.mypy_cache/
+.ruff_cache/
+pytest-cache-files-*/
+.hermes/
+logs/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

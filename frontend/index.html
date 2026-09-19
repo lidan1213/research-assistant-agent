@@ -1,0 +1,3304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>科研助手 Agent · 演示</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --panel: #ffffff;
+      --panel-2: #fbfcfe;
+      --border: #e6e9f0;
+      --border-strong: #d6dae6;
+      --text: #1e2430;
+      --muted: #6b7488;
+      --muted-2: #98a0b3;
+      --primary: #4f46e5;
+      --primary-d: #4338ca;
+      --primary-soft: #eef0fe;
+      --primary-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, .06);
+      --shadow: 0 4px 16px rgba(16, 24, 40, .08);
+      --shadow-lg: 0 10px 30px rgba(16, 24, 40, .12);
+      --radius: 14px;
+      --radius-sm: 10px;
+
+      --plan: #64748b;
+      --thought: #6366f1;
+      --action: #d97706;
+      --observation: #0d9488;
+      --answer: #16a34a;
+      --done: #7c3aed;
+      --error: #dc2626;
+      --delegate: #db2777;
+      --worker: #0891b2;
+      --blackboard: #ea580c;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 100% -10%, #eef0fe 0%, rgba(238,240,254,0) 60%),
+        var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---------- 滚动条 ---------- */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: #cdd3e0; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+    ::-webkit-scrollbar-thumb:hover { background: #b6bdce; background-clip: content-box; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    /* ---------- 头部 ---------- */
+    header {
+      padding: 14px 24px;
+      background: var(--primary-grad);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: var(--shadow);
+      position: relative;
+      z-index: 5;
+    }
+    header .logo {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: rgba(255,255,255,.18);
+      display: grid; place-items: center;
+      font-size: 18px; backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,.25);
+    }
+    header h1 { font-size: 16px; margin: 0; font-weight: 700; letter-spacing: .3px; }
+    header .sub { color: rgba(255,255,255,.82); font-size: 12.5px; font-weight: 400; }
+    .status {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: rgba(255,255,255,.9);
+      background: rgba(255,255,255,.14);
+      padding: 6px 12px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.2);
+      backdrop-filter: blur(4px);
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #c2c8d0; transition: background .25s, box-shadow .25s; }
+    .dot.on { background: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.3); }
+    .dot.off { background: #f87171; box-shadow: 0 0 0 3px rgba(248,113,113,.3); }
+
+    /* ---------- 标签页 ---------- */
+    nav.tabs {
+      display: flex; gap: 6px; padding: 10px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .tabbtn {
+      padding: 8px 18px; border: 1px solid transparent; background: transparent;
+      border-radius: 999px; cursor: pointer; font-size: 13.5px; color: var(--muted);
+      font-weight: 500; transition: all .18s ease;
+    }
+    .tabbtn:hover { background: var(--panel-2); color: var(--text); }
+    .tabbtn.active {
+      color: var(--primary-d); background: var(--primary-soft);
+      border-color: #dadcfb; font-weight: 600;
+    }
+
+    section.tab { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    section.tab[hidden] { display: none; }
+
+    /* ---------- 对话 tab ---------- */
+    .modebar {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+      padding: 12px 24px 0; background: var(--panel);
+    }
+    .modebar button {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+      padding: 9px 14px; border: 1px solid var(--border); background: var(--panel);
+      border-radius: 10px; cursor: pointer; text-align: left;
+      transition: all .18s ease;
+    }
+    .modebar button:hover { border-color: var(--border-strong); }
+    .modebar button.active {
+      border-color: var(--primary); background: var(--primary-soft);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+    }
+    .modebar .mb-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .modebar .mb-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+    .modebar button.active .mb-name { color: var(--primary-d); }
+
+    .chatwrap { flex: 1; display: flex; min-height: 0; }
+    main#log {
+      flex: 1; overflow-y: auto; padding: 18px 24px; display: flex;
+      flex-direction: column; gap: 12px;
+    }
+
+    aside#blackboard {
+      width: 340px; border-left: 1px solid var(--border); background: var(--panel-2);
+      overflow-y: auto; padding: 18px;
+    }
+    aside#blackboard.hidden { display: none; }
+    aside#blackboard h3 {
+      margin: 0 0 12px; font-size: 13px; color: var(--blackboard);
+      display: flex; align-items: center; gap: 7px; font-weight: 700;
+    }
+    aside#blackboard h3::before {
+      content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--blackboard);
+    }
+    .bb-item {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 12px; margin-bottom: 10px; box-shadow: var(--shadow-sm);
+    }
+    .bb-key {
+      font-weight: 700; font-size: 12px; color: var(--blackboard);
+      text-transform: capitalize; display: flex; align-items: center; gap: 6px;
+    }
+    .bb-key::before { content: "●"; font-size: 8px; color: var(--blackboard); }
+    .bb-val { font-size: 13px; line-height: 1.55; margin-top: 5px; color: #2b3340; white-space: pre-wrap; word-break: break-word; }
+    #chain-content {
+      font-size: 13px; line-height: 1.9; color: #2b3340;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px; box-shadow: var(--shadow-sm);
+    }
+    #chain-content b {
+      color: var(--primary-d); background: var(--primary-soft);
+      padding: 1px 8px; border-radius: 6px; font-weight: 600;
+    }
+
+    /* ---------- 事件卡片（时间线） ---------- */
+    .event {
+      background: #ffffff; border: 1px solid var(--border);
+      border-left: 4px solid var(--border-strong);
+      border-radius: var(--radius); padding: 12px 16px;
+      animation: fade .28s ease; box-shadow: var(--shadow-sm);
+      transition: box-shadow .18s ease, transform .18s ease;
+    }
+    .event:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+    .event .head { display: flex; align-items: center; gap: 9px; font-size: 12px; margin-bottom: 8px; }
+    .badge {
+      font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+      color: #fff; letter-spacing: .6px; box-shadow: 0 1px 2px rgba(0,0,0,.08);
+    }
+    /* 徽章：深色实底 → 浅色底 + 深色字，避免"底色太深"的观感 */
+    .b-plan { background: #eef2ff; color: #4338ca; }
+    .b-thought { background: #fef3c7; color: #92400e; }
+    .b-action { background: #e0e7ff; color: #4338ca; }
+    .b-observation { background: #f1f5f9; color: #334155; }
+    .b-answer { background: #dcfce7; color: #166534; }
+    .b-eval { background: #fef3c7; color: #92400e; }
+    .b-done { background: #e2e8f0; color: #334155; }
+    .b-error { background: #fee2e2; color: #b91c1c; }
+    .b-delegate { background: #fae8ff; color: #a21caf; }
+    .b-worker { background: #cffafe; color: #0e7490; }
+    .b-blackboard { background: #ffedd5; color: #c2410c; }
+    .event .body { font-size: 14px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; color: #111827; }
+    .event .body code { background: #f0f2f7; padding: 1px 6px; border-radius: 5px; font-size: 12.5px; color: #b45309; font-family: "SFMono-Regular", Consolas, monospace; }
+    .b-plan.ev { border-left-color: var(--plan); } .b-thought.ev { border-left-color: var(--thought); }
+    .b-action.ev { border-left-color: var(--action); } .b-observation.ev { border-left-color: var(--observation); }
+    .b-answer.ev { border-left-color: var(--answer); } .b-done.ev { border-left-color: var(--done); }
+    .b-error.ev { border-left-color: var(--error); } .b-delegate.ev { border-left-color: var(--delegate); }
+    .b-worker.ev { border-left-color: var(--worker); } .b-blackboard.ev { border-left-color: var(--blackboard); }
+
+    /* ---------- 中间过程折叠块 ---------- */
+    details.proc-fold {
+      background: var(--panel-2); border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm); padding: 6px 12px;
+    }
+    details.proc-fold summary {
+      cursor: pointer; font-size: 12.5px; color: var(--muted);
+      font-weight: 600; user-select: none; padding: 4px 0;
+    }
+    details.proc-fold summary:hover { color: var(--primary); }
+    details.proc-fold[open] summary { margin-bottom: 8px; }
+    details.proc-fold .event { box-shadow: none; margin-bottom: 8px; }
+    details.proc-fold .event:last-child { margin-bottom: 4px; }
+
+    /* ---------- 会话操作栏 ---------- */
+    .session-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 24px 0; background: var(--panel);
+    }
+    .session-list {
+      background: var(--panel); border-bottom: 1px solid var(--border);
+      max-height: 240px; overflow-y: auto; padding: 4px 24px 10px;
+    }
+    .session-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); margin-bottom: 6px;
+      cursor: pointer; font-size: 13px;
+    }
+    .session-item:hover { background: var(--primary-soft); }
+    .session-item .s-time { color: var(--muted); font-size: 11px; margin-left: auto; white-space: nowrap; }
+
+    /* ---------- 运营总览卡片 ---------- */
+    .dash-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .dash-card {
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 14px 16px; background: var(--panel);
+    }
+    .dash-card .d-num { font-size: 26px; font-weight: 700; color: var(--primary); }
+    .dash-card .d-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ---------- 知识库告警横幅 ---------- */
+    .kb-alert {
+      background: #fef3c7; color: #92400e; border-bottom: 1px solid #f59e0b;
+      padding: 6px 24px; font-size: 13px; display: flex; align-items: center;
+      gap: 8px;
+    }
+    .kb-alert[hidden] { display: none; }  /* hidden 优先于 display:flex */
+
+    /* ---------- 底部输入 ---------- */
+    footer {
+      border-top: 1px solid var(--border); background: var(--panel);
+      padding: 14px 24px; display: flex; gap: 12px; align-items: flex-end;
+      box-shadow: 0 -2px 10px rgba(16,24,40,.04);
+    }
+    .input-shell {
+      flex: 1; display: flex; flex-direction: column; gap: 8px;
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 4px 6px 4px 14px;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    .input-shell:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+    footer textarea {
+      width: 100%; resize: none; height: 46px; padding: 10px 0; border: none;
+      background: transparent; font-family: inherit; font-size: 14px; outline: none; color: var(--text);
+    }
+    .opts { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    .opts label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+    .opts input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+    footer button {
+      height: 46px; padding: 0 24px; border: none; border-radius: 12px;
+      background: var(--primary-grad); color: #fff; font-size: 14px; cursor: pointer;
+      font-weight: 600; box-shadow: 0 3px 10px rgba(79,70,229,.3); transition: transform .12s ease, box-shadow .18s ease;
+      white-space: nowrap;
+    }
+    footer button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(79,70,229,.36); }
+    footer button:active { transform: translateY(0); }
+    footer button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .hint { color: var(--muted-2); font-size: 12.5px; padding: 0 4px; }
+
+    /* ---------- 评测 tab ---------- */
+    .evalwrap { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 18px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; box-shadow: var(--shadow-sm);
+    }
+    .card h3 {
+      margin: 0 0 16px; font-size: 15px; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 9px;
+    }
+    .card h3::before {
+      content: ""; width: 4px; height: 16px; border-radius: 3px;
+      background: var(--primary-grad);
+    }
+    .card h4 { margin: 18px 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .field input[type=text], .field textarea, .field input[type=file] {
+      width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 9px 12px; font-family: inherit; font-size: 13px; outline: none;
+      background: var(--panel-2); color: var(--text); transition: border-color .18s, box-shadow .18s;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); background: #fff; }
+    .field input[type=file] { padding: 8px 12px; cursor: pointer; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .runbtn {
+      height: 40px; padding: 0 20px; border: none; border-radius: var(--radius-sm);
+      background: var(--primary-grad); color: #fff; font-weight: 600; cursor: pointer;
+      font-size: 13.5px; box-shadow: 0 3px 10px rgba(79,70,229,.26); transition: transform .12s, box-shadow .18s;
+    }
+    .runbtn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(79,70,229,.34); }
+    .runbtn:active { transform: translateY(0); }
+    .runbtn[style*="475569"], .runbtn[style*="#475569"] {
+      background: linear-gradient(135deg, #475569, #334155); box-shadow: 0 3px 10px rgba(71,85,105,.26);
+    }
+    .tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; margin-top: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .tbl th, .tbl td { border-bottom: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+    .tbl th { background: var(--panel-2); color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border-strong); }
+    .tbl tbody tr:nth-child(even) { background: #fafbfd; }
+    .tbl tbody tr:hover { background: var(--primary-soft); }
+    .tbl td code { color: #b45309; font-family: "SFMono-Regular", Consolas, monospace; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 8px; }
+    .metric {
+      border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 14px;
+      background: var(--panel-2); box-shadow: var(--shadow-sm);
+      transition: transform .15s, box-shadow .18s;
+    }
+    .metric:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .metric-label { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+    .metric-bar { height: 9px; background: #eef1f6; border-radius: 999px; margin: 9px 0 6px; overflow: hidden; }
+    .metric-fill { height: 100%; border-radius: 999px; transition: width .5s ease; }
+    .metric-val { font-size: 16px; font-weight: 700; color: var(--text); }
+    select {
+      border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px;
+      font-family: inherit; font-size: 13px; background: var(--panel-2); color: var(--text); outline: none;
+    }
+    select:focus { border-color: var(--primary); }
+    #runsList label { padding: 8px 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color .15s; }
+    #runsList label:hover { border-color: var(--primary); }
+    #runsList input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--primary); }
+    svg { display: block; }
+    .md-table { border-collapse: collapse; margin: 8px 0; font-size: 13px; width: 100%; }
+    .md-table th, .md-table td { border: 1px solid var(--border-strong); padding: 5px 9px; text-align: left; }
+    .md-table th { background: var(--panel-2); font-weight: 600; }
+    .md-code { background: #f1f5f9; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; overflow-x: auto; margin: 8px 0; }
+    .md-code code { font-family: ui-monospace, Consolas, monospace; white-space: pre; color: #1e293b; }
+    .md-inline { background: var(--primary-soft); color: #4338ca; padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+    blockquote { border-left: 3px solid var(--border-strong); margin: 6px 0; padding: 2px 10px; color: var(--muted); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .modal-overlay[hidden] { display: none !important; }
+    .batch-bar { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+    .batch-bar[hidden] { display: none !important; }
+    /* 移动端：模式卡片横向滚动、工具栏换行、输入框与评测卡片压缩 */
+    @media (max-width: 760px) {
+      .mode-grid { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 4px; }
+      .mode-card { min-width: 210px; flex: 0 0 210px; }
+      .opts { flex-wrap: wrap; gap: 6px; }
+      .input-shell { border-radius: 12px; }
+      #input { min-height: 74px; }
+      .dash-grid, .metrics { grid-template-columns: 1fr 1fr; gap: 7px; }
+      .card { padding: 10px; }
+      .session-list { margin-left: 0; margin-right: 0; }
+      .modal-box { width: 96vw; max-height: 86vh; }
+    }
+    @media (max-width: 440px) {
+      .dash-grid, .metrics { grid-template-columns: 1fr; }
+      .upbtn, .runbtn { min-height: 32px; }
+      .modal-foot { flex-wrap: wrap; }
+    }
+    .modal-box { background: var(--panel); border: 1px solid var(--border-strong); border-radius: 12px; width: min(680px, 92vw); max-height: 78vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.25); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .modal-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); }
+    .chart-card {
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      margin-top: 10px; box-shadow: var(--shadow-sm); overflow: hidden;
+    }
+    /* ---------- 登录遮罩 ---------- */
+    #loginOverlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: radial-gradient(900px 500px at 30% -10%, #eef0fe 0%, rgba(238,240,254,0) 55%), var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #loginOverlay[hidden] { display: none; }
+    .login-card {
+      width: 340px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 18px; padding: 32px 28px; box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+    .login-logo {
+      width: 56px; height: 56px; margin: 0 auto 12px; border-radius: 15px;
+      background: var(--primary-grad); display: grid; place-items: center;
+      font-size: 28px; box-shadow: var(--shadow);
+    }
+    .login-card h2 { margin: 0 0 4px; font-size: 20px; }
+    .login-sub { margin: 0 0 22px; color: var(--muted); font-size: 13px; }
+    .login-field { text-align: left; margin-bottom: 14px; }
+    .login-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .login-field input {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm); font-size: 14px; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .login-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+    .login-err { color: var(--error); font-size: 13px; margin: 0 0 12px; text-align: left; }
+    .login-btn {
+      width: 100%; padding: 11px; border: none; border-radius: var(--radius-sm);
+      background: var(--primary-grad); color: #fff; font-size: 15px; cursor: pointer;
+      transition: opacity .15s;
+    }
+    .login-btn:hover { opacity: .9; }
+    .login-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .login-btn-ghost {
+      margin-top: 10px; background: transparent; color: var(--primary);
+      border: 1px solid var(--primary); transition: background .15s;
+    }
+    .login-btn-ghost:hover { background: var(--primary-soft); opacity: 1; }
+    .login-switch { margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .login-switch .login-hint { margin-top: 0; }
+    .login-link {
+      background: none; border: none; color: var(--primary); font-size: 12px;
+      cursor: pointer; padding: 0; text-decoration: underline;
+    }
+    .login-link:hover { opacity: .8; }
+    .login-hint { margin-top: 16px; color: var(--muted-2); font-size: 12px; line-height: 1.7; }
+
+    /* ---------- 用户栏 ---------- */
+    .userbox { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .uname { font-weight: 600; font-size: 13px; }
+    .urole {
+      font-size: 11px; padding: 2px 8px; border-radius: 20px;
+      background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.28);
+    }
+    .logout-btn {
+      background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3);
+      color: #fff; font-size: 12px; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,.26); }
+
+    /* ---------- 学生会话行 ---------- */
+    .student-row {
+      display: block; padding: 12px 14px; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer;
+      background: var(--panel-2); transition: border-color .15s, box-shadow .15s;
+    }
+    .student-row:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+
+    /* ---------- 知识库标签（多库切换） ---------- */
+    .tool-card {
+      display: flex; align-items: center; gap: 8px;
+      background: #eef2ff; border: 1px solid #e0e7ff;
+      border-radius: 8px; padding: 6px 10px; font-size: 13px;
+    }
+    .tool-chip {
+      background: var(--primary); color: #fff; border-radius: 999px;
+      padding: 2px 10px; font-size: 12px; font-weight: 600; white-space: nowrap;
+    }
+    .tool-args {
+      color: var(--muted); font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .tool-result { white-space: pre-wrap; word-break: break-word; }
+
+    .kb-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--panel-2); border: 1px solid var(--border-soft);
+      border-radius: 999px; padding: 4px 12px; font-size: 13px;
+      cursor: pointer; user-select: none; transition: all .15s;
+    }
+    .kb-tag:hover { border-color: var(--primary); color: var(--primary); }
+    .kb-tag.active {
+      background: var(--primary); border-color: var(--primary);
+      color: #fff; font-weight: 600;
+    }
+    .kb-del {
+      background: transparent; border: none; color: #dc2626;
+      cursor: pointer; font-size: 12px; padding: 0 2px; line-height: 1;
+    }
+    .kb-del:hover { color: #b91c1c; }
+
+    /* ---------- 示例评测结果 ---------- */
+    .sample-card {
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px 16px; margin-top: 10px;
+    }
+
+    /* ---------- 上传按钮 ---------- */
+    .upbtn {
+      cursor: pointer; color: var(--primary); font-size: 13px;
+      padding: 2px 8px; border: 1px solid var(--border-strong);
+      border-radius: 8px; background: var(--panel);
+    }
+    .upbtn:hover { background: var(--primary-soft); }
+
+    /* ---------- 引用徽章 ---------- */
+    .ref-badge {
+      display: inline-block; padding: 1px 6px; margin: 0 2px;
+      background: var(--primary-soft); color: var(--primary);
+      border: 1px solid #d8d4f5; border-radius: 6px;
+      font-size: 12px; cursor: pointer; text-decoration: none;
+      transition: background .15s;
+    }
+    .ref-badge:hover { background: #e0ddfb; }
+
+    /* ---------- 流式输出光标 ---------- */
+    .stream-cursor {
+      display: inline-block; width: 8px; height: 15px; vertical-align: -2px;
+      margin-left: 2px; background: var(--primary);
+      animation: blink 0.8s steps(1) infinite;
+      border-radius: 2px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
+</head>
+<body>
+  <!-- 登录遮罩 -->
+  <div id="loginOverlay">
+    <div class="login-card">
+      <div class="login-logo">🧪</div>
+      <h2>科研助手 Agent</h2>
+      <p class="login-sub">登录后使用 · 管理员可管理知识库与评测</p>
+      <div class="login-field">
+        <label>账号</label>
+        <input id="loginUser" type="text" placeholder="用户名" autocomplete="username" />
+      </div>
+      <div class="login-field">
+        <label>密码</label>
+        <input id="loginPass" type="password" placeholder="密码" autocomplete="current-password" />
+      </div>
+      <!-- 注册模式：确认密码 -->
+      <div class="login-field" id="loginPass2Field" hidden>
+        <label>确认密码</label>
+        <input id="loginPass2" type="password" placeholder="再次输入密码" autocomplete="new-password" />
+      </div>
+      <div id="loginErr" class="login-err" hidden></div>
+      <button id="loginBtn" class="login-btn">登 录</button>
+      <button id="registerBtn" class="login-btn login-btn-ghost" hidden>注 册</button>
+      <div class="login-switch">
+        <span id="loginSwitchHint" class="login-hint">没有账号？</span>
+        <button id="loginSwitch" class="login-link" onclick="toggleAuthMode()">注册新账号</button>
+      </div>
+      <div class="login-hint" id="loginPresetHint">默认账号：管理员 admin / 123456 · 学生 student / 123456</div>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo">🧪</div>
+    <div>
+      <h1>科研助手 Agent · 演示</h1>
+      <div class="sub">ReAct 单 Agent · 多 Agent 协同 · 检索 & 答案级评测</div>
+    </div>
+    <div id="userBox" class="userbox" hidden>
+      <span id="userName" class="uname"></span>
+      <span id="userRole" class="urole"></span>
+      <button class="logout-btn" onclick="logout()">退出</button>
+    </div>
+    <span class="status"><span id="dot" class="dot"></span><span id="statusText">未连接</span></span>
+  </header>
+
+  <!-- 知识库异常告警横幅 -->
+  <div id="kbAlert" class="kb-alert" hidden>
+    ⚠️ 知识库服务异常（向量检索可能不可用），请管理员检查 ChromaDB 服务
+    <button class="runbtn" style="background:#92400e;padding:2px 12px;font-size:12px;margin-left:8px" onclick="checkKbHealth()">重试</button>
+  </div>
+
+  <nav class="tabs">
+    <button class="tabbtn active" data-tab="chat" onclick="showTab('chat')">对话演示</button>
+    <button class="tabbtn" data-tab="mykb" onclick="showTab('mykb')" id="myKbTabBtn" hidden>我的知识库</button>
+    <button class="tabbtn" data-tab="writing" onclick="showTab('writing')" id="writingTabBtn" hidden>📝 论文写作</button>
+    <button class="tabbtn" data-tab="kg" onclick="showTab('kg')" id="kgTabBtn" hidden>🕸 知识图谱</button>
+    <button class="tabbtn" data-tab="skills" onclick="showTab('skills')" id="skillsTabBtn" hidden>🧩 Skills</button>
+    <button class="tabbtn" data-tab="students" onclick="showTab('students')" id="studentsTabBtn" hidden>学生会话</button>
+    <button class="tabbtn" data-tab="dashboard" onclick="showTab('dashboard')" id="dashboardTabBtn" hidden>运营总览</button>
+  </nav>
+
+  <!-- 对话演示 -->
+  <section class="tab" id="tab-chat">
+    <div class="modebar">
+      <button data-mode="auto" class="active" onclick="setMode('auto')">
+        <span class="mb-name">🧭 自动路由</span>
+        <span class="mb-desc">按任务选择直答、单 Agent、规划或多 Agent</span>
+      </button>
+      <button data-mode="react" onclick="setMode('react')">
+        <span class="mb-name">⚡ ReAct 单 Agent</span>
+        <span class="mb-desc">自由推理循环，直接调用工具</span>
+      </button>
+      <button data-mode="plan" onclick="setMode('plan')">
+        <span class="mb-name">📋 先规划后执行</span>
+        <span class="mb-desc">Planner 分步执行，汇总成稿</span>
+      </button>
+      <button data-mode="multi" onclick="setMode('multi')">
+        <span class="mb-name">🤝 多 Agent 协同</span>
+        <span class="mb-desc">主管委派专家，共享黑板</span>
+      </button>
+    </div>
+    <div class="session-bar">
+      <button class="upbtn" onclick="toggleSessionList()">📜 会话记录</button>
+      <button class="upbtn" onclick="newChat()" title="清空当前对话，开始新会话">➕ 新开会话</button>
+      <span id="sessionInfo" class="hint" style="font-size:12px"></span>
+    </div>
+    <div id="sessionList" class="session-list" hidden>
+      <div style="padding:6px 8px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;gap:6px">
+          <input id="sessionSearch" type="search" placeholder="🔍 搜索会话内容…" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text)">
+          <button class="kb-del" onclick="toggleBatchMode()" id="batchModeBtn" title="批量删除/导出" style="font-size:12px">☑ 批量</button>
+        </div>
+        <div id="batchBar" class="batch-bar" hidden>
+          <label style="font-size:12px;display:inline-flex;gap:4px;align-items:center"><input type="checkbox" id="batchAll" onchange="batchToggleAll(this.checked)"> 全选</label>
+          <button class="runbtn" style="height:auto;padding:3px 10px;font-size:12px;background:#dc2626" onclick="batchDelete()">🗑 删除选中</button>
+          <button class="runbtn" style="height:auto;padding:3px 10px;font-size:12px;background:#475569" onclick="batchExport()">⬇ 导出选中</button>
+          <button class="runbtn" style="height:auto;padding:3px 10px;font-size:12px;background:#475569" onclick="exportAllSessions()">⬇ 导出全部</button>
+          <span id="batchCount" class="hint" style="font-size:12px"></span>
+        </div>
+      </div>
+      <div id="sessionListBody" class="hint" style="padding:8px 12px">加载中…</div>
+    </div>
+    <div id="noteList" class="session-list" hidden>
+      <div id="noteListBody" class="hint" style="padding:8px 12px">加载中…</div>
+    </div>
+    <div class="chatwrap">
+      <main id="log">
+        <div class="hint">发送问题后，Agent 的 plan / thought / action / observation / answer / done 事件会实时出现在这里。多 Agent 模式下还会展示主管委派专家与共享黑板更新。示例：<code>计算 (1234*5678) mod 100 + 42，并给出 APA 引用示例</code></div>
+      </main>
+      <aside id="blackboard" class="hidden">
+        <h3>共享黑板 Blackboard</h3>
+        <div id="bb-content"></div>
+        <h3 style="margin-top:18px">专家链路 Chain</h3>
+        <div id="chain-content" style="font-size:13px;line-height:1.9"></div>
+      </aside>
+    </div>
+    <footer>
+      <div class="input-shell">
+        <textarea id="input" placeholder="输入问题，回车发送…"></textarea>
+        <div class="opts">
+          <label title="开启后 Agent 可通过 Bing 联网检索实时资料（国内直连，无需代理）"><input type="checkbox" id="useWeb" /> 🌐 联网检索</label>
+          <label title="上传文件（.txt/.md/.pdf/图片，图片自动 OCR 提取文字入库）"><input type="checkbox" id="saveToKb" checked /> 📎 存入知识库</label>
+          <label class="upbtn" for="kbFileInput">⬆ 上传文件</label>
+          <input type="file" id="kbFileInput" accept=".txt,.md,.pdf,image/*" hidden />
+          <label class="upbtn" for="imgInput" title="传图提问（多模态）：上传论文截图/图表，Agent 看图回答">🖼 传图</label>
+          <input type="file" id="imgInput" accept="image/*" hidden />
+          <span id="imgPreview" class="hint" style="display:none;align-items:center;gap:6px">
+            <img id="imgPreviewThumb" style="height:28px;border-radius:4px;border:1px solid var(--border-strong)" alt="预览" />
+            <button class="kb-del" onclick="clearImage()" title="移除图片">✕</button>
+          </span>
+          <select id="kbSelect" title="对话时检索哪个知识库；选「不使用」则 Agent 不检索任何资料" style="padding:4px 8px;border:1px solid var(--border-strong);border-radius:6px;background:#fff;color:var(--text-main);font-size:12px"></select>
+          <select id="modelSelect" title="选择本次对话使用的模型" style="padding:4px 8px;border:1px solid var(--border-strong);border-radius:6px;background:#fff;color:var(--text-main);font-size:12px"></select>
+          <select id="skillSelect" title="自动匹配或手动指定本次任务使用的 Skill" style="padding:4px 8px;border:1px solid var(--border-strong);border-radius:6px;background:#fff;color:var(--text-main);font-size:12px"><option value="auto">🧩 Skill：自动匹配</option></select>
+          <span id="modelCost" class="hint" style="font-size:11px;color:var(--muted)" title="当前模型消费"></span>
+          <button class="upbtn" onclick="openNoteDialog()" title="把科研概念整理成带标签的笔记">📝 概念笔记</button>
+          <button class="upbtn" onclick="toggleNoteList()" title="查看我的笔记">🗂 笔记列表</button>
+          <span id="uploadStatus" class="hint" style="font-size:12px"></span>
+        </div>
+      </div>
+      <button id="send">发送</button>
+    </footer>
+  </section>
+
+  <section class="tab" id="tab-skills" hidden>
+    <div class="evalwrap">
+      <div class="card">
+        <h3>🧩 本地 Skills</h3>
+        <p class="hint" style="margin:0 0 12px">Skill 将可复用的科研流程注入 Agent。系统只读取项目内 SKILL.md 并复用已注册工具，不执行 Skill 中的任意脚本。</p>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="loadSkills()">刷新</button>
+          <button class="runbtn" id="skillReloadBtn" onclick="reloadSkills()" hidden>重新扫描目录</button>
+          <span id="skillStatus" class="hint" style="align-self:center"></span>
+        </div>
+        <div id="skillList" class="field" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 我的知识库 -->
+  <section class="tab" id="tab-mykb" hidden>
+    <div class="evalwrap">
+      <div class="card">
+        <h3>📚 我的知识库</h3>
+        <p class="hint" style="margin:0 0 12px">可创建多个专属文献库（如「量子点」「RAG综述」），每个库独立存储、互不干扰。对话时在输入框旁的下拉框选择检索哪个库。</p>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="loadMyKb()">刷新</button>
+          <button class="runbtn" style="background:#059669" onclick="createLibrary()">➕ 新建知识库</button>
+          <span class="hint" style="align-self:center">共 <b id="myKbCount">0</b> 个文件 · <span id="myKbChunks">0</span> 个片段</span>
+        </div>
+        <div id="myKbLibraries" class="field" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px"></div>
+        <div id="myKbList" class="field" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 学生会话（管理员） -->
+  <section class="tab" id="tab-students" hidden>
+    <div class="evalwrap">
+      <div class="card">
+        <h3>学生列表 · 对话计划</h3>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="loadStudents()">刷新学生列表</button>
+          <span class="hint">点击学生查看其全部对话会话，点击会话查看完整对话记录</span>
+        </div>
+        <div id="studentsList" class="field" style="margin-top:14px"></div>
+      </div>
+      <div class="card" id="sessionsCard" hidden>
+        <h3 id="sessionsTitle">会话列表</h3>
+        <button class="runbtn" style="background:#475569" onclick="backToStudents()">← 返回学生列表</button>
+        <div id="sessionsList" class="field" style="margin-top:14px"></div>
+      </div>
+      <div class="card" id="detailCard" hidden>
+        <h3 id="detailTitle">对话记录</h3>
+        <button class="runbtn" style="background:#475569" onclick="backToSessions()">← 返回会话列表</button>
+        <div id="detailContent" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 运营总览（管理员） -->
+  <section class="tab" id="tab-dashboard" hidden>
+    <div class="evalwrap">
+      <div class="card">
+        <h3>运营总览</h3>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="loadDashboard()">刷新数据</button>
+          <span class="hint">平台整体使用情况一览</span>
+        </div>
+        <div id="dashboardCards" class="field" style="margin-top:14px">
+          <div class="dash-grid" id="dashGrid"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>📈 成本趋势（近 14 天）</h3>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="loadCostTrend()">刷新</button>
+          <span class="hint">LLM 调用成本按天/按学生聚合（按内置单价估算）</span>
+        </div>
+        <div id="costTrendBox" class="field" style="margin-top:14px">加载中…</div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>🔍 检索质量（近 30 天）</h3>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="loadRetrievalStats()">刷新</button>
+          <span class="hint">RAG 命中日志聚合：识别检索失败率 / 零命中 / 文档命中排行（僵尸文档排查）</span>
+        </div>
+        <div id="retrievalBox" class="field" style="margin-top:14px">加载中…</div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>🛡 内容审计（近 30 天）</h3>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="loadAudit()">刷新</button>
+          <span class="hint">敏感词命中 / 越权访问记录（仅记录不拦截，供复核）</span>
+        </div>
+        <div id="auditBox" class="field" style="margin-top:14px">加载中…</div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>🔬 Golden Set 评测</h3>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="startEval()" id="evalBtn">一键评测</button>
+          <span class="hint">真实 LLM 跑 5 个固定用例（计算/知识库/联网/问答），耗时 1-5 分钟</span>
+        </div>
+        <div id="evalBox" class="field" style="margin-top:14px">尚未运行</div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>📊 RAG 检索准确度</h3>
+        <div class="row">
+          <button class="runbtn" style="background:#475569" onclick="startRetrievalEval()" id="retrievalEvalBtn">运行 qrels 评测</button>
+          <select id="retrievalDataset" style="padding:4px 8px;border:1px solid var(--border-strong);border-radius:6px;background:#fff;color:var(--text-main);font-size:12px"><option value="extended">扩展集（11 条）</option><option value="baseline">基准集（5 条）</option><option value="chinese">中文集（30 条）</option></select>
+        </div>
+        <div id="retrievalEvalBox" class="field" style="margin-top:14px">尚未运行</div>
+        <div style="margin-top:12px">
+          <button class="runbtn" style="height:auto;padding:3px 12px;font-size:12px;background:#475569" onclick="loadEvalHistory()">📜 评测历史</button>
+          <div id="evalHistoryBox" class="field" style="margin-top:8px;font-size:12px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-writing" hidden>
+    <div class="evalwrap">
+      <div class="card">
+        <h3>📝 论文写作</h3>
+        <div class="row">
+          <span class="hint">主题 → 大纲 → 分节草稿 → 引用格式化 → 导出 Markdown / Word / PDF</span>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="wtopic" placeholder="论文主题（如：量子点太阳能电池的效率提升研究）" style="flex:1;min-width:260px;padding:8px 12px;border:1px solid var(--border-strong);border-radius:8px;font-size:13px" />
+            <select id="wtype" style="padding:8px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:13px">
+              <option>综述</option><option>研究论文</option><option>实验报告</option><option>学位论文</option>
+            </select>
+            <button class="runbtn" onclick="genOutline()" style="height:auto;padding:8px 18px">生成大纲</button>
+          </div>
+          <div id="wOutlineBox" class="hint" style="margin-top:10px"></div>
+          <div id="wDraftBox" class="hint" style="margin-top:10px"></div>
+        </div>
+        <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+          <b style="font-size:13px">📚 参考文献格式化</b>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <textarea id="wrefs" placeholder="每行一条原始引用（标题/作者/期刊/年份…）" style="flex:1;min-height:70px;padding:8px;border:1px solid var(--border-strong);border-radius:8px;font-size:12px"></textarea>
+            <select id="wstyle" style="padding:8px;border:1px solid var(--border-strong);border-radius:8px;font-size:13px">
+              <option value="apa">APA 第7版</option><option value="gbt7714">GB/T 7714</option>
+            </select>
+            <button class="runbtn" onclick="formatCite()" style="height:auto;padding:8px 14px">格式化</button>
+          </div>
+          <pre id="wCiteBox" class="hint" style="margin-top:8px;white-space:pre-wrap;font-size:12px"></pre>
+        </div>
+        <div style="margin-top:12px">
+          <button class="runbtn" style="background:#475569" onclick="exportPaper('md')">⬇ Markdown</button>
+          <button class="runbtn" style="background:#2563eb" onclick="exportPaper('docx')">⬇ Word</button>
+          <button class="runbtn" style="background:#dc2626" onclick="exportPaper('pdf')">⬇ PDF</button>
+          <span class="hint" style="margin-left:8px">导出当前大纲 + 全部已生成草稿</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 知识图谱 -->
+  <section class="tab" id="tab-kg" hidden>
+    <div class="evalwrap">
+      <div class="card">
+        <h3>🕸 知识图谱</h3>
+        <div class="row">
+          <span class="hint">从你的知识库文档自动抽取实体与关系（方法/技术/材料/概念…），构建可视化图谱。Agent 对话中也可通过 kg_query / kg_relations 工具查询。</span>
+        </div>
+        <div class="row" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="runbtn" onclick="kgBuild()" id="kgBuildBtn">🔨 从知识库构建</button>
+          <button class="runbtn" style="background:#475569" onclick="kgLoad()" id="kgRefreshBtn">🔄 刷新</button>
+          <button class="runbtn" style="background:#dc2626" onclick="kgClear()" id="kgClearBtn">🗑 清空图谱</button>
+          <span id="kgStatus" class="hint" style="font-size:12px"></span>
+        </div>
+        <div class="row" style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          <input id="kgSearchInput" placeholder="🔍 搜索实体（如：钙钛矿、Transformer）" style="flex:1;max-width:320px;padding:6px 10px;border:1px solid var(--border-strong);border-radius:8px;font-size:13px"
+                 onkeydown="if (event.key === 'Enter') kgSearch()" />
+          <button class="runbtn" style="height:auto;padding:6px 14px" onclick="kgSearch()">搜索</button>
+        </div>
+        <div id="kgSearchResults" class="hint" style="margin-top:8px;font-size:12px"></div>
+        <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap">
+          <div id="kgCanvasBox" style="flex:1;min-width:420px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff">
+            <svg id="kgSvg" width="100%" height="520" style="display:block"></svg>
+          </div>
+          <div style="flex:0 0 300px">
+            <div class="card" style="padding:12px">
+              <b style="font-size:13px">📊 统计</b>
+              <div id="kgStats" class="hint" style="font-size:12px;margin-top:6px;line-height:1.8"></div>
+            </div>
+            <div class="card" style="padding:12px;margin-top:10px">
+              <b style="font-size:13px">🧩 实体列表</b>
+              <div id="kgEntityList" class="hint" style="font-size:12px;margin-top:6px;max-height:300px;overflow-y:auto"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="kbModal" class="modal-overlay" hidden onclick="if (event.target === this) closeKbModal()">
+    <div class="modal-box">
+      <div class="modal-head">
+        <b id="kbModalTitle">📄 引用来源</b>
+        <button class="kb-del" onclick="closeKbModal()" title="关闭">✕</button>
+      </div>
+      <div id="kbModalBody" style="font-size:13px;line-height:1.7;max-height:58vh;overflow-y:auto;padding:12px 14px;background:var(--bg);border-radius:0"></div>
+      <div class="modal-foot">
+        <button class="runbtn" style="height:auto;padding:4px 14px" onclick="kbNav(-1)">← 上一个</button>
+        <button class="runbtn" style="height:auto;padding:4px 14px" onclick="kbNav(1)">下一个 →</button>
+        <span id="kbModalCounter" class="hint" style="font-size:12px;flex:1;text-align:center"></span>
+        <button class="runbtn" style="height:auto;padding:4px 14px;background:#475569" onclick="copyKbText()">📋 复制</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const log = document.getElementById("log");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("send");
+    const dot = document.getElementById("dot");
+    const statusText = document.getElementById("statusText");
+
+    const META = {
+      plan:        { label: "PLAN",        cls: "b-plan" },
+      plan_stream: { label: "规划中…",    cls: "b-plan" },
+      thought:     { label: "THOUGHT",     cls: "b-thought" },
+      action:      { label: "ACTION",      cls: "b-action" },
+      observation: { label: "OBSERVATION", cls: "b-observation" },
+      stream:      { label: "ANSWER",      cls: "b-answer" },
+      answer:      { label: "ANSWER",      cls: "b-answer" },
+      eval:        { label: "SELF-EVAL",   cls: "b-eval" },
+      done:        { label: "DONE",        cls: "b-done" },
+      error:       { label: "ERROR",       cls: "b-error" },
+      step_start:  { label: "STEP",        cls: "b-plan" },
+      needs_user_input: { label: "需要补充", cls: "b-plan" },
+      resumed: { label: "继续执行", cls: "b-plan" },
+      paused: { label: "已暂停", cls: "b-plan" },
+      step_done:   { label: "STEP✓",       cls: "b-done" },
+      delegate:    { label: "DELEGATE",    cls: "b-delegate" },
+      worker:      { label: "EXPERT",      cls: "b-worker" },
+      blackboard:  { label: "BLACKBOARD",  cls: "b-blackboard" },
+      route:       { label: "ROUTE",       cls: "b-thought" },
+      provider:    { label: "UPSTREAM",    cls: "b-observation" },
+    };
+
+    let ws = null;
+    let sessionId = null;
+    let busy = false;
+    let mode = "auto";
+    let reconnectTimer = null;
+    // 当前选中的知识库名：""=默认库；"none"=不使用知识库；其他=命名库
+    let currentKb = "";
+    // 引用溯源：本轮对话中 knowledge_search 命中的来源（按 [n] 序号）
+    let kbSources = [];
+    // 流式输出：当前正在逐字渲染的答案卡片
+    let streamingEl = null;
+    let streamingBody = null;
+    let authToken = localStorage.getItem("auth_token") || "";
+    let authUser = localStorage.getItem("auth_user") || "";
+    let authRole = localStorage.getItem("auth_role") || "";
+
+    // ---------- 文件上传（存入个人知识库） ----------
+    async function handleKbUpload(file) {
+      const status = document.getElementById("uploadStatus");
+      if (!file) return;
+      const save = document.getElementById("saveToKb").checked;
+      status.textContent = `上传中：${file.name}…`;
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("save_to_kb", save ? "true" : "false");
+        // 上传到当前选中的知识库（"none"=不使用知识库时上传到默认库）
+        const kbName = document.getElementById("kbSelect").value;
+        if (kbName && kbName !== "none") fd.append("kb_name", kbName);
+        const resp = await fetch("/api/userkb/upload", {
+          method: "POST",
+          headers: authHeaders(),
+          body: fd,
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          status.textContent = `❌ ${j.message || j.detail || "上传失败"}`;
+          return;
+        }
+        status.textContent = `✅ ${j.message}`;
+        setTimeout(() => { status.textContent = ""; }, 6000);
+        loadKbOptions();  // 文档数可能变化，刷新下拉与库标签
+        if (!document.getElementById("tab-mykb").hidden) loadMyKb();
+      } catch (e) {
+        status.textContent = `❌ ${e.message}`;
+      }
+    }
+
+    // ---------- 认证 ----------
+    function authHeaders(extra) {
+      const h = Object.assign({}, extra || {});
+      if (authToken) h["Authorization"] = "Bearer " + authToken;
+      return h;
+    }
+
+    // 登录/注册模式切换
+    function toggleAuthMode() {
+      const isRegister = !document.getElementById("registerBtn").hidden;
+      const loginBtn = document.getElementById("loginBtn");
+      const regBtn = document.getElementById("registerBtn");
+      const pass2Field = document.getElementById("loginPass2Field");
+      const switchBtn = document.getElementById("loginSwitch");
+      const hint = document.getElementById("loginSwitchHint");
+      const presetHint = document.getElementById("loginPresetHint");
+      const err = document.getElementById("loginErr");
+      err.hidden = true;
+      if (isRegister) {
+        // 切回登录模式
+        loginBtn.hidden = false; regBtn.hidden = true; pass2Field.hidden = true;
+        switchBtn.textContent = "注册新账号"; hint.textContent = "没有账号？";
+        presetHint.hidden = false;
+      } else {
+        // 切入注册模式
+        loginBtn.hidden = true; regBtn.hidden = false; pass2Field.hidden = false;
+        switchBtn.textContent = "返回登录"; hint.textContent = "已有账号？";
+        presetHint.hidden = true;
+        document.getElementById("loginPass2").value = "";
+      }
+      document.getElementById("loginUser").focus();
+    }
+
+    async function doRegister() {
+      const username = document.getElementById("loginUser").value.trim();
+      const password = document.getElementById("loginPass").value;
+      const password2 = document.getElementById("loginPass2").value;
+      const err = document.getElementById("loginErr");
+      const btn = document.getElementById("registerBtn");
+      err.hidden = true;
+      if (!username || !password || !password2) {
+        err.textContent = "请填写账号、密码和确认密码"; err.hidden = false; return;
+      }
+      if (password !== password2) {
+        err.textContent = "两次输入的密码不一致"; err.hidden = false; return;
+      }
+      btn.disabled = true; btn.textContent = "注册中…";
+      try {
+        const resp = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password, password2 }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          err.textContent = j.message || "注册失败"; err.hidden = false;
+          btn.disabled = false; btn.textContent = "注 册"; return;
+        }
+        // 注册成功：写入 token 直接进入系统
+        authToken = j.token; authUser = j.username; authRole = j.role;
+        localStorage.setItem("auth_token", authToken);
+        localStorage.setItem("auth_user", authUser);
+        localStorage.setItem("auth_role", authRole);
+        applyAuthUI();
+      } catch (e) {
+        err.textContent = "网络错误：" + e.message; err.hidden = false;
+        btn.disabled = false; btn.textContent = "注 册";
+      }
+    }
+
+    async function doLogin() {
+      const username = document.getElementById("loginUser").value.trim();
+      const password = document.getElementById("loginPass").value;
+      const err = document.getElementById("loginErr");
+      const btn = document.getElementById("loginBtn");
+      err.hidden = true;
+      if (!username || !password) {
+        err.textContent = "请输入账号和密码"; err.hidden = false; return;
+      }
+      btn.disabled = true; btn.textContent = "登录中…";
+      try {
+        const resp = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          err.textContent = j.message || "登录失败"; err.hidden = false;
+          btn.disabled = false; btn.textContent = "登 录"; return;
+        }
+        authToken = j.token; authUser = j.username; authRole = j.role;
+        localStorage.setItem("auth_token", authToken);
+        localStorage.setItem("auth_user", authUser);
+        localStorage.setItem("auth_role", authRole);
+        applyAuthUI();
+      } catch (e) {
+        err.textContent = "网络错误：" + e.message; err.hidden = false;
+      }
+      btn.disabled = false; btn.textContent = "登 录";
+    }
+
+    function logout() {
+      authToken = ""; authUser = ""; authRole = "";
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("auth_user");
+      localStorage.removeItem("auth_role");
+      localStorage.removeItem("kb_session");  // 退出时清空会话，避免串号
+      localStorage.removeItem("current_tab"); // 退出时清空 Tab 记忆，避免换账号串 Tab
+      sessionId = null;
+      clearTimeout(reconnectTimer); // 防止登出后定时器继续用空/旧 token 重连（无限循环打后端）
+      if (ws) { try { ws.close(); } catch (e) {} ws = null; }
+      // 清掉对话区残留的错误卡片（如"未登录或登录已过期"），回到干净登录页
+      log.querySelectorAll(".b-error, .retry-bar").forEach(el => el.remove());
+      applyAuthUI();
+    }
+
+    // ---------- 登录态静默校验 ----------
+    // 页面加载时用本地 token 调一次轻量接口：无效/过期 → 直接回登录页（不闪 ERROR 卡片）
+    async function verifyTokenOnLoad() {
+      try {
+        const resp = await fetch("/api/chat/sessions", { headers: authHeaders() });
+        if (resp.status === 401 || resp.status === 403) logout();
+      } catch (e) { /* 网络错误不处理：WS 连接失败会给出提示 */ }
+    }
+
+    // ---------- 知识库健康探活 ----------
+    async function checkKbHealth() {
+      const alertEl = document.getElementById("kbAlert");
+      if (!authToken) { alertEl.hidden = true; return; }
+      try {
+        const resp = await fetch("/api/knowledge/health", { headers: authHeaders() });
+        const j = await resp.json();
+        alertEl.hidden = resp.ok && j.status === "ok";
+      } catch (e) {
+        alertEl.hidden = false;  // 网络错误也视为知识库不可达
+      }
+    }
+
+    function applyAuthUI() {
+      const loggedIn = !!authToken;
+      const isAdmin = loggedIn && authRole === "admin";
+      document.getElementById("loginOverlay").hidden = loggedIn;
+      document.getElementById("userBox").hidden = !loggedIn;
+      document.getElementById("studentsTabBtn").hidden = !isAdmin;
+      document.getElementById("dashboardTabBtn").hidden = !isAdmin;
+      document.getElementById("myKbTabBtn").hidden = !loggedIn;
+      document.getElementById("writingTabBtn").hidden = !loggedIn;
+      document.getElementById("kgTabBtn").hidden = !loggedIn;
+      document.getElementById("skillsTabBtn").hidden = !loggedIn;
+      document.getElementById("skillReloadBtn").hidden = !isAdmin;
+      if (loggedIn) {
+        document.getElementById("userName").textContent = authUser;
+        document.getElementById("userRole").textContent = isAdmin ? "管理员" : "学生";
+        // 恢复上次停留的 Tab（知识库页刷新不再跳回对话页）；无权访问时自动回退
+        restoreTab();
+        // 已有 WS 连接但用的不是当前 token（登录后旧连接仍在）→ 强制关闭，用新 token 重连
+        if (!ws || ws.readyState > 1 || (wsToken !== authToken)) {
+          if (ws) { try { ws.close(); } catch (e) {} ws = null; }
+          connect();
+        }
+        restoreHistory();  // 刷新后恢复当前会话的历史对话
+        checkKbHealth();   // 知识库健康探活（异常显示黄色横幅）
+        loadKbOptions();   // 填充知识库下拉（不使用/默认库/各命名库）
+        loadModelOptions(); // 填充模型下拉（用户自选）
+        loadSkills();      // 填充 Skill 选择器与管理页
+        verifyTokenOnLoad(); // 静默校验本地 token：过期/无效直接回登录页，不闪 ERROR
+      } else {
+        if (ws) { try { ws.close(); } catch (e) {} ws = null; }
+        showTab("chat");
+      }
+    }
+
+    function setStatus(state) {
+      dot.className = "dot " + (state === "on" ? "on" : state === "off" ? "off" : "");
+      statusText.textContent = state === "on" ? "已连接" : state === "off" ? "已断开" : "连接中…";
+    }
+
+    function setModeStatus(m) {
+      // 多 Agent / 规划执行模式走 SSE，不依赖 WebSocket，状态指示应反映模式而非 WS
+      if (m === "multi") {
+        dot.className = "dot off";
+        statusText.textContent = "多 Agent 模式";
+      } else if (m === "plan") {
+        dot.className = "dot off";
+        statusText.textContent = "规划执行模式";
+      } else {
+        // react：恢复为真实 WS 连接状态（避免从 plan/multi 切回后残留模式文本）
+        setStatus(ws && ws.readyState === 1 ? "on" : "off");
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    // ---------- 知识图谱 ----------
+    const KG_TYPE_COLORS = {
+      "方法": "#2563eb", "技术": "#7c3aed", "材料": "#059669", "模型": "#dc2626",
+      "数据集": "#d97706", "指标": "#0891b2", "工具": "#4f46e5", "概念": "#64748b",
+      "人物": "#db2777", "机构": "#0d9488", "论文": "#9333ea", "任务": "#ea580c",
+      "应用": "#16a34a", "其他": "#6b7280",
+    };
+    function kgTypeColor(type) { return KG_TYPE_COLORS[type] || "#6b7280"; }
+    let kgNodes = [];
+    let kgEdges = [];
+    let kgSelected = null;
+
+    async function kgLoad() {
+      const status = document.getElementById("kgStatus");
+      status.textContent = "加载中…";
+      try {
+        const [g, s] = await Promise.all([
+          fetch("/api/kg/graph", { headers: authHeaders() }).then(r => r.json()),
+          fetch("/api/kg/stats", { headers: authHeaders() }).then(r => r.json()),
+        ]);
+        kgNodes = g.nodes || [];
+        kgEdges = g.edges || [];
+        kgSelected = null;
+        renderKgGraph();
+        document.getElementById("kgStats").innerHTML =
+          `实体 <b>${s.entities}</b> · 关系 <b>${s.relations}</b><br>` +
+          (s.type_distribution ? Object.entries(s.type_distribution)
+            .map(([t, c]) => `<span style="color:${kgTypeColor(t)}">■</span> ${escapeHtml(t)} ${c}`)
+            .join(" · ") : "");
+        const list = document.getElementById("kgEntityList");
+        list.innerHTML = kgNodes.map(n =>
+          `<div class="kg-ent" data-id="${n.id}" onclick="kgSelectEntity(${n.id})" style="cursor:pointer;padding:3px 6px;border-radius:6px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(n.description || "")}">
+             <span style="color:${kgTypeColor(n.type)}">●</span> ${escapeHtml(n.name)}
+             <span class="hint" style="font-size:11px">${escapeHtml(n.type || "")}</span></div>`).join("") ||
+          '<span class="hint">图谱为空，点击「🔨 从知识库构建」生成</span>';
+        status.textContent = `已加载 ${kgNodes.length} 节点 / ${kgEdges.length} 条边`;
+      } catch (e) {
+        status.textContent = "加载失败: " + e;
+      }
+    }
+
+    async function kgBuild() {
+      const status = document.getElementById("kgStatus");
+      const btn = document.getElementById("kgBuildBtn");
+      btn.disabled = true;
+      status.textContent = "正在从知识库抽取实体/关系…（多篇文档可能需 1-3 分钟）";
+      try {
+        const resp = await fetch("/api/kg/build", { method: "POST", headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) throw new Error(j.detail || resp.statusText);
+        // 轮询任务
+        for (let i = 0; i < 120; i++) {
+          await new Promise(r => setTimeout(r, 3000));
+          const t = await fetch(`/api/kg/build/${j.task_id}`, { headers: authHeaders() }).then(r => r.json());
+          if (t.status === "done") {
+            const st = t.stats || {};
+            status.textContent = `✅ 构建完成：处理 ${st.docs} 篇文档，抽取 ${st.entities} 实体 / ${st.relations} 关系` +
+              (st.failed ? `（${st.failed} 篇抽取失败）` : "");
+            kgLoad();
+            break;
+          } else if (t.status === "failed") {
+            status.textContent = "❌ 构建失败: " + (t.error || "未知错误");
+            break;
+          }
+        }
+      } catch (e) {
+        status.textContent = "构建失败: " + e;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function kgClear() {
+      if (!confirm("确认清空当前用户的全部知识图谱数据？")) return;
+      await fetch("/api/kg", { method: "DELETE", headers: authHeaders() });
+      kgNodes = []; kgEdges = [];
+      renderKgGraph();
+      kgLoad();
+    }
+
+    async function kgSearch() {
+      const q = document.getElementById("kgSearchInput").value.trim();
+      if (!q) { document.getElementById("kgSearchResults").innerHTML = ""; return; }
+      const r = await fetch(`/api/kg/entities?q=${encodeURIComponent(q)}`, { headers: authHeaders() });
+      const j = await r.json();
+      const box = document.getElementById("kgSearchResults");
+      if (!j.entities || !j.entities.length) { box.innerHTML = "未找到匹配实体"; return; }
+      box.innerHTML = j.entities.map(e =>
+        `<span style="cursor:pointer;margin-right:10px" onclick="kgSelectEntity(${e.id})">
+           <span style="color:${kgTypeColor(e.type)}">●</span> ${escapeHtml(e.name)}
+           <span class="hint" style="font-size:11px">${escapeHtml(e.type)}</span></span>`).join("");
+    }
+
+    function kgSelectEntity(id) {
+      kgSelected = id;
+      renderKgGraph();
+      const n = kgNodes.find(x => x.id === id);
+      if (!n) return;
+      const neighbors = kgEdges.filter(e => e.source_id === id || e.target_id === id);
+      const related = new Set();
+      neighbors.forEach(e => { related.add(e.source_id); related.add(e.target_id); });
+      document.getElementById("kgSearchResults").innerHTML =
+        `<b>${escapeHtml(n.name)}</b> <span class="hint">(${escapeHtml(n.type || "")})</span> — ${escapeHtml(n.description || "无描述")}<br>` +
+        neighbors.map(e => {
+          const other = e.source_id === id ? e.target_id : e.source_id;
+          const on = kgNodes.find(x => x.id === other);
+          return `↦ ${escapeHtml(e.relation)} → <b>${escapeHtml(on ? on.name : other)}</b>`;
+        }).join("<br>") || "<span class='hint'>暂无相邻关系</span>";
+    }
+
+    function renderKgGraph() {
+      const svg = document.getElementById("kgSvg");
+      const W = svg.clientWidth || 900, H = 520;
+      const nodes = kgNodes, edges = kgEdges;
+      let html = "";
+      // 力导向简化：环形布局（按边数排序，中心区放高连接度节点）
+      const deg = {};
+      edges.forEach(e => { deg[e.source_id] = (deg[e.source_id] || 0) + 1; deg[e.target_id] = (deg[e.target_id] || 0) + 1; });
+      const pos = {};
+      const degreeSorted = [...nodes].sort((a, b) => (deg[b.id] || 0) - (deg[a.id] || 0));
+      const cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 70;
+      degreeSorted.forEach((n, i) => {
+        const angle = (2 * Math.PI * i) / Math.max(nodes.length, 1) - Math.PI / 2;
+        const rr = R * (0.55 + 0.45 * (nodes.length > 1 ? i / (nodes.length - 1) : 0));
+        pos[n.id] = { x: cx + rr * Math.cos(angle), y: cy + rr * Math.sin(angle) };
+      });
+      if (nodes.length === 1) pos[nodes[0].id] = { x: cx, y: cy };
+      // 边
+      edges.forEach(e => {
+        const a = pos[e.source_id], b = pos[e.target_id];
+        if (!a || !b) return;
+        const hot = kgSelected !== null && (e.source_id === kgSelected || e.target_id === kgSelected);
+        html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${hot ? "#f59e0b" : "#cbd5e1"}" stroke-width="${hot ? 2 : 1}" opacity="0.85"/>`;
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        if (hot) html += `<text x="${mx}" y="${my - 4}" font-size="10" fill="#b45309" text-anchor="middle">${escapeHtml(e.relation)}</text>`;
+      });
+      // 节点
+      nodes.forEach(n => {
+        const p = pos[n.id];
+        if (!p) return;
+        const selected = n.id === kgSelected;
+        const connected = kgSelected !== null && edges.some(e => (e.source_id === kgSelected && e.target_id === n.id) || (e.target_id === kgSelected && e.source_id === n.id));
+        const size = 6 + Math.min((deg[n.id] || 0) * 2, 8);
+        html += `<g onclick="kgSelectEntity(${n.id})" style="cursor:pointer">
+          <circle cx="${p.x}" cy="${p.y}" r="${size}" fill="${kgTypeColor(n.type)}" opacity="${selected || connected || kgSelected === null ? 1 : 0.3}" stroke="${selected ? "#000" : "#fff"}" stroke-width="${selected ? 2 : 1}"/>
+          <text x="${p.x}" y="${p.y - size - 4}" font-size="11" fill="${selected ? "#b45309" : "#334155"}" text-anchor="middle" font-weight="${selected ? "bold" : "normal"}">${escapeHtml(n.name)}</text>
+        </g>`;
+      });
+      if (!nodes.length) html = `<text x="${W/2}" y="${H/2}" font-size="13" fill="#94a3b8" text-anchor="middle">图谱为空 — 点击「🔨 从知识库构建」从文档抽取实体与关系</text>`;
+      svg.innerHTML = html;
+      // 让 SVG 撑满容器宽度
+      svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    }
+
+    // ---------- 引用溯源 ----------
+    // 从 knowledge_search 的 observation 输出中提取来源文件（"来源:xxx"），
+    // 按出现顺序编号存入 kbSources，供答案中的 [n] 引用点击跳转。
+    function collectSourcesFromObservation(output) {
+      if (!output) return;
+      const lines = String(output).split("\n");
+      for (const line of lines) {
+        // 匹配 "[n] 来源:文件名 | 相似度:..." 行；跳过"检索来源：用户..."总述行
+        const m = line.match(/^\[\d+\]\s*来源[:：]([^\s|]+)/);
+        if (m && m[1] && !kbSources.includes(m[1])) {
+          kbSources.push(m[1]);
+        }
+      }
+    }
+
+    // 把 answer 文本中的 [n] 引用标记替换为可点击链接；
+    // 点击后弹出该来源对应的资料片段（用 prompt 模拟详情，或跳转）。
+    // 轻量 Markdown 渲染（零依赖）：代码块/表格/标题/列表/引用/粗斜体/行内代码/链接。
+    // 输入为已 escapeHtml 的文本，输出安全 HTML（不引入任何未转义内容）。
+    function renderMarkdown(t) {
+      // 代码块 ```lang\n...```
+      t = t.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) =>
+        `<pre class="md-code"><code>${code.replace(/\n$/, "")}</code></pre>`);
+      // 表格：连续以 | 开头的行（含分隔行）
+      t = t.replace(/((?:^\|.*\|[^\n]*\n)+)/gm, (m) => {
+        const rows = m.trim().split("\n").filter(r => r.trim());
+        const cells = rows.map(r => r.replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim()));
+        const sep = cells[1] && cells[1].every(c => /^:?-{2,}:?$/.test(c));
+        const head = cells[0], body = sep ? cells.slice(2) : cells.slice(1);
+        let html = "<table class='md-table'><thead><tr>" + head.map(c => `<th>${c}</th>`).join("") + "</tr></thead><tbody>";
+        body.forEach(r => { html += "<tr>" + r.map(c => `<td>${c}</td>`).join("") + "</tr>"; });
+        return html + "</tbody></table>";
+      });
+      // 标题
+      t = t.replace(/^##### (.*)$/gm, "<h6>$1</h6>")
+           .replace(/^#### (.*)$/gm, "<h5>$1</h5>")
+           .replace(/^### (.*)$/gm, "<h4>$1</h4>")
+           .replace(/^## (.*)$/gm, "<h3>$1</h3>")
+           .replace(/^# (.*)$/gm, "<h2>$1</h2>");
+      // 无序/有序列表项（行首 - * 或 1. ）
+      t = t.replace(/^(\s*)[-*] (.*)$/gm, "<li>$2</li>")
+           .replace(/^(\s*)\d+\. (.*)$/gm, "<li>$2</li>");
+      // 引用
+      t = t.replace(/^&gt; (.*)$/gm, "<blockquote>$1</blockquote>");
+      // 粗体 / 斜体 / 行内代码 / 链接（转义后 &amp; 等无碍）
+      t = t.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+      t = t.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+      t = t.replace(/`([^`]+)`/g, "<code class='md-inline'>$1</code>");
+      t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      // 换行 → <br>（表格/代码块已替换，不受影响）
+      t = t.replace(/\n/g, "<br>");
+      return t;
+    }
+
+    function renderAnswerWithRefs(text) {
+      let s = escapeHtml(text);
+      s = renderMarkdown(s);
+      // [n] / [n,m] / [n-m] 引用标记 -> 可点击徽章
+      s = s.replace(/\[(\d+(?:[-,]\d+)*)\]/g, (m, nums) => {
+        const ids = nums.split(/[-,]/).map(x => parseInt(x, 10)).filter(x => x > 0 && x <= kbSources.length);
+        if (!ids.length) return m;
+        const labels = ids.map(i => `[${i}]`);
+        const title = "查看引用来源";
+        return `<a class="ref-badge" href="javascript:void(0)" onclick="showKbSource(${ids[0] - 1})" title="${title}">${labels.join("")}</a>`;
+      });
+      return s;
+    }
+
+    // 展示第 i 个引用来源（0-indexed）：模态抽屉展示来源文件名与文本预览，可翻页/复制。
+    let kbModalIdx = -1;
+    let kbModalDocs = [];
+
+    function showKbSource(idx) { openKbModal(idx); }
+
+    async function openKbModal(idx) {
+      kbModalIdx = idx;
+      try {
+        const resp = await fetch("/api/userkb/documents", { headers: authHeaders() });
+        const j = await resp.json();
+        kbModalDocs = j.documents || [];
+      } catch (e) { kbModalDocs = []; }
+      renderKbModal();
+      document.getElementById("kbModal").hidden = false;
+    }
+
+    function renderKbModal() {
+      const src = kbSources[kbModalIdx];
+      const doc = kbModalDocs.find(d => d.source === src);
+      document.getElementById("kbModalTitle").textContent =
+        `📄 引用来源 ${kbModalIdx + 1}/${kbSources.length}：${src || "未知来源"}`;
+      document.getElementById("kbModalBody").innerHTML = doc
+        ? `<pre style="white-space:pre-wrap;font-family:inherit;margin:0">${escapeHtml(doc.text || "")}</pre>`
+        : '<span class="hint">（本地知识库中已删除该文件）</span>';
+      document.getElementById("kbModalCounter").textContent = `${kbModalIdx + 1} / ${kbSources.length}`;
+    }
+
+    function kbNav(delta) {
+      if (!kbSources.length) return;
+      kbModalIdx = (kbModalIdx + delta + kbSources.length) % kbSources.length;
+      renderKbModal();
+    }
+
+    function closeKbModal() { document.getElementById("kbModal").hidden = true; }
+
+    function copyKbText() {
+      const doc = kbModalDocs.find(d => d.source === kbSources[kbModalIdx]);
+      if (!doc || !doc.text) { alert("无可复制内容"); return; }
+      navigator.clipboard.writeText(doc.text).then(() => alert("已复制到剪贴板")).catch(() => alert("复制失败"));
+    }
+
+    // ---------- 中间过程折叠 ----------
+    // 运行中：过程事件实时显示在日志流（像 DeepSeek 网页版边输出边滚动）；
+    // done/error 到达后：把本轮过程事件移入可折叠 <details>，页面只留提问与答案。
+    function foldProcEvents() {
+      const procNodes = [];
+      let maxIdx = -1;
+      // 只收集日志流直接子节点中的过程事件（历史已折叠的不在直接子节点中，天然跳过）
+      for (let i = 0; i < log.children.length; i++) {
+        const child = log.children[i];
+        if (child.classList && child.classList.contains("proc-ev")) {
+          procNodes.push(child);
+          maxIdx = i;
+        }
+      }
+      if (!procNodes.length) return;
+      const det = document.createElement("details");
+      det.className = "proc-fold";
+      const sum = document.createElement("summary");
+      sum.textContent = `🧩 中间过程（${procNodes.length} 步）· 点击展开`;
+      det.appendChild(sum);
+      // 找到本轮最后一个过程事件之后的第一个非过程节点（通常是 ANSWER），
+      // 折叠块插在它之前；多轮对话时自然落在「本轮」的答案上方
+      let refNode = null;
+      for (let i = maxIdx + 1; i < log.children.length; i++) {
+        const c = log.children[i];
+        if (!(c.classList && c.classList.contains("proc-ev"))) { refNode = c; break; }
+      }
+      for (const n of procNodes) det.appendChild(n);
+      if (refNode) log.insertBefore(det, refNode);
+      else log.appendChild(det);
+    }
+
+    // ---------- 会话历史恢复（刷新后还原对话） ----------
+    // 从 localStorage 恢复 session_id 并拉取历史消息渲染为事件卡片
+    async function restoreHistory() {
+      const saved = localStorage.getItem("kb_session");
+      if (!saved || !authToken) return;
+      sessionId = saved;
+      try {
+        const resp = await fetch(
+          `/api/chat/history?session_id=${encodeURIComponent(authUser + "__" + saved)}`,
+          { headers: authHeaders() }
+        );
+        if (!resp.ok) return;
+        const j = await resp.json();
+        const msgs = j.messages || [];
+        if (!msgs.length) return;
+        log.innerHTML = "";  // 清空初始说明，用真实历史替换
+        kbSources = [];
+        for (const m of msgs) {
+          if (m.role === "user") {
+            renderEvent({ type: "thought", content: "▸ " + m.content }, true);
+          } else if (m.role === "assistant") {
+            if (m.tool_calls && m.tool_calls.length) {
+              // 有工具调用：这是工具调用前的思考文本
+              if (m.content) renderEvent({ type: "thought", content: m.content }, true);
+              for (const tc of m.tool_calls) {
+                renderEvent({ type: "action", tool: tc.name, arguments: tc.arguments });
+              }
+            } else {
+              // 纯回答
+              renderEvent({ type: "answer", content: m.content });
+            }
+          } else if (m.role === "tool") {
+            renderEvent({ type: "observation", output: m.content, tool: m.name });
+          }
+        }
+      } catch (e) {
+        console.error("恢复会话历史失败", e);
+      }
+    }
+
+    // ---------- 会话记录 / 新开会话 ----------
+    let showArchived = false; // 会话列表：是否显示归档会话
+
+    async function loadSessionList() {
+      const box = document.getElementById("sessionListBody");
+      box.innerHTML = "加载中…";
+      try {
+        const resp = await fetch("/api/chat/sessions", { headers: authHeaders() });
+        const j = await resp.json();
+        let sessions = j.sessions || [];
+        const archivedList = sessions.filter(s => s.archived);
+        if (!showArchived) sessions = sessions.filter(s => !s.archived);
+        const archBtn = archivedList.length
+          ? `<div style="padding:4px 8px;font-size:12px;border-bottom:1px solid var(--border)">
+              <button class="kb-del" style="color:var(--muted)" onclick="toggleArchived()">🗄 归档会话（${archivedList.length}）${showArchived ? " ▲" : " ▼"}</button>
+            </div>` : "";
+        if (!sessions.length) {
+          box.innerHTML = archBtn + (showArchived ? "暂无归档会话。" : "暂无历史会话。");
+          return;
+        }
+        box.innerHTML = archBtn + sessions.map(s =>
+          `<div class="session-item" onclick="${batchMode ? '' : `switchSession('${s.session_id}')`}">
+            ${batchMode ? `<input type="checkbox" class="batch-cb" data-sid="${s.session_id}" ${batchSel.has(s.session_id) ? "checked" : ""} onclick="event.stopPropagation();batchToggle('${s.session_id}', this.checked)" style="margin-right:4px">` : ""}
+            <span>💬 ${escapeHtml((s.title || s.first_message || "对话").slice(0, 30))}</span>
+            ${s.archived
+              ? '<span class="hint" style="font-size:11px">🗄</span>'
+              : `<span class="hint" style="font-size:11px">${s.message_count} 条</span>`}
+            <span class="s-time">${escapeHtml(mdClean(s.last_message).slice(0, 20))}</span>
+            ${s.archived
+              ? `<button class="kb-del" title="恢复会话" onclick="event.stopPropagation();restoreSession('${s.session_id}')">♻</button>`
+              : `<button class="kb-del" title="重命名会话" onclick="event.stopPropagation();renameSession('${s.session_id}')">✎</button>
+            <button class="kb-del" title="导出为 Markdown" onclick="event.stopPropagation();exportSession('${s.session_id}')">⬇</button>
+            <button class="kb-del" title="生成只读分享链接" onclick="event.stopPropagation();shareSession('${s.session_id}')">🔗</button>`}
+            ${s.summary ? `<div class="hint" style="font-size:11px;margin-top:3px;color:var(--muted)">📝 ${escapeHtml(s.summary.slice(0, 60))}</div>` : ""}
+          </div>`).join("");
+      } catch (e) {
+        box.innerHTML = `加载失败：${escapeHtml(e.message)}`;
+      }
+    }
+
+    function toggleArchived() { showArchived = !showArchived; loadSessionList(); }
+
+    // ---------- 会话批量管理 ----------
+    let batchMode = false;
+    let batchSel = new Set();
+
+    function toggleBatchMode() {
+      batchMode = !batchMode;
+      batchSel.clear();
+      document.getElementById("batchBar").hidden = !batchMode;
+      document.getElementById("batchModeBtn").style.color = batchMode ? "var(--primary)" : "";
+      document.getElementById("batchAll").checked = false;
+      updateBatchCount();
+      loadSessionList();
+    }
+
+    function batchToggle(sid, checked) {
+      if (checked) batchSel.add(sid); else batchSel.delete(sid);
+      updateBatchCount();
+    }
+
+    function batchToggleAll(checked) {
+      batchSel.clear();
+      document.querySelectorAll(".batch-cb").forEach(cb => {
+        cb.checked = checked;
+        if (checked) batchSel.add(cb.dataset.sid);
+      });
+      updateBatchCount();
+    }
+
+    function updateBatchCount() {
+      document.getElementById("batchCount").textContent = batchSel.size ? `已选 ${batchSel.size} 个` : "";
+    }
+
+    async function batchDelete() {
+      if (!batchSel.size) { alert("未选中任何会话"); return; }
+      if (!confirm(`删除选中的 ${batchSel.size} 个会话？不可恢复`)) return;
+      try {
+        const resp = await fetch("/api/chat/sessions/batch-delete", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ ids: [...batchSel] }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) { alert(j.detail || "删除失败"); return; }
+        batchSel.clear();
+        updateBatchCount();
+        loadSessionList();
+        alert(`已删除 ${j.deleted} 个会话`);
+      } catch (e) { alert("删除失败：" + e.message); }
+    }
+
+    // 导出选中（逐个下载；最多 10 个避免浏览器拦截多个下载）
+    async function batchExport() {
+      if (!batchSel.size) { alert("未选中任何会话"); return; }
+      if (batchSel.size > 10) { alert("一次最多导出 10 个，请分批"); return; }
+      for (const sid of batchSel) await exportSession(sid);
+    }
+
+    // 导出全部（后端合并为单个 Markdown）
+    async function exportAllSessions() {
+      try {
+        const resp = await fetch("/api/chat/sessions/export-all", { headers: authHeaders() });
+        if (!resp.ok) { alert("导出失败：" + (await resp.text()).slice(0, 100)); return; }
+        const blob = await resp.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = authUser + "_sessions.md";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (e) { alert("导出失败：" + e.message); }
+    }
+
+    // 恢复归档会话
+    async function restoreSession(sid) {
+      try {
+        await fetch(`/api/chat/sessions/${encodeURIComponent(sid)}/restore`, { method: "POST", headers: authHeaders() });
+        loadSessionList();
+      } catch (e) {
+        alert("恢复失败：" + e.message);
+      }
+    }
+
+    // ---------- 会话全文搜索（防抖 300ms；空查询回到列表） ----------
+    let sessionSearchTimer = null;
+    document.getElementById("sessionSearch").addEventListener("input", function () {
+      clearTimeout(sessionSearchTimer);
+      const q = this.value.trim();
+      sessionSearchTimer = setTimeout(() => {
+        if (!q) { loadSessionList(); return; }
+        searchSessions(q);
+      }, 300);
+    });
+
+    async function searchSessions(q) {
+      const box = document.getElementById("sessionListBody");
+      box.innerHTML = "搜索中…";
+      try {
+        const resp = await fetch(`/api/chat/sessions/search?q=${encodeURIComponent(q)}`, { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) {
+          box.innerHTML = `搜索失败：${escapeHtml(j.detail || j.message || "")}`;
+          return;
+        }
+        const hits = j.hits || [];
+        if (!hits.length) {
+          box.innerHTML = `未找到包含「${escapeHtml(q)}」的会话。`;
+          return;
+        }
+        box.innerHTML = hits.map(h =>
+          `<div class="session-item" onclick="switchSession('${h.session_id}')">
+            <span>💬 ${escapeHtml((h.title || "对话").slice(0, 30))}</span>
+            <span class="hint" style="font-size:11px">${h.hits} 处命中</span>
+            <div class="hint" style="font-size:11px;margin-top:3px;color:var(--muted)">…${escapeHtml(h.snippet)}…</div>
+          </div>`).join("");
+      } catch (e) {
+        box.innerHTML = `搜索失败：${escapeHtml(e.message)}`;
+      }
+    }
+
+    // ---------- 论文写作（大纲/草稿/引用/导出） ----------
+    let wOutline = [];  // 大纲章节
+    let wDrafts = {};   // section_id -> 草稿内容
+
+    async function genOutline() {
+      const topic = document.getElementById("wtopic").value.trim();
+      if (!topic) { alert("请输入论文主题"); return; }
+      const box = document.getElementById("wOutlineBox");
+      box.innerHTML = "生成大纲中…";
+      try {
+        const resp = await fetch("/api/writing/outline", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ topic, paper_type: document.getElementById("wtype").value }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) { box.innerHTML = `失败：${escapeHtml(j.detail || j.message || "")}`; return; }
+        wOutline = j.sections || [];
+        wDrafts = {};
+        box.innerHTML = `<div style="margin-bottom:6px"><b>📋 大纲（${wOutline.length} 节）</b></div>` +
+          wOutline.map(s =>
+            `<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed var(--border)">
+              <span style="min-width:30px;font-weight:600;color:var(--primary)">${escapeHtml(s.id)}</span>
+              <div style="flex:1">
+                <b style="font-size:13px">${escapeHtml(s.title)}</b>
+                <div class="hint" style="font-size:12px">${escapeHtml(s.description)}</div>
+              </div>
+              <button class="runbtn" style="height:auto;padding:4px 12px;font-size:12px" onclick="genDraft('${s.id}')">生成草稿</button>
+            </div>`).join("");
+        document.getElementById("wDraftBox").innerHTML = "";
+      } catch (e) { box.innerHTML = `失败：${escapeHtml(e.message)}`; }
+    }
+
+    async function genDraft(sid) {
+      const s = wOutline.find(x => x.id === sid);
+      if (!s) return;
+      const box = document.getElementById("wDraftBox");
+      const card = document.createElement("div");
+      card.className = "card"; card.style.marginTop = "10px"; card.style.padding = "12px";
+      card.innerHTML = `<b style="font-size:13px">✍ ${escapeHtml(s.title)}</b><div class="hint" style="font-size:12px;margin-top:4px">生成中…</div>`;
+      box.prepend(card);
+      try {
+        const resp = await fetch("/api/writing/draft", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({
+            topic: document.getElementById("wtopic").value.trim(),
+            paper_type: document.getElementById("wtype").value,
+            section: s, outline: wOutline,
+          }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) { card.querySelector(".hint").textContent = "失败：" + (j.detail || j.message || ""); return; }
+        wDrafts[sid] = j.content;
+        card.innerHTML = `<b style="font-size:13px">✍ ${escapeHtml(j.title)}</b>` +
+          `<textarea onchange="wDrafts['${sid}']=this.value" style="width:100%;min-height:140px;margin-top:8px;padding:8px;border:1px solid var(--border-strong);border-radius:8px;font-size:12px;line-height:1.6">${escapeHtml(j.content)}</textarea>`;
+      } catch (e) { card.querySelector(".hint").textContent = "失败：" + e.message; }
+    }
+
+    async function formatCite() {
+      const refs = document.getElementById("wrefs").value.split("\n").map(s => s.trim()).filter(Boolean);
+      if (!refs.length) { alert("请输入引用条目"); return; }
+      const box = document.getElementById("wCiteBox");
+      box.textContent = "格式化中…";
+      try {
+        const resp = await fetch("/api/writing/cite", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ refs, style: document.getElementById("wstyle").value }),
+        });
+        const j = await resp.json();
+        box.textContent = resp.ok ? j.formatted : ("失败：" + (j.detail || ""));
+      } catch (e) { box.textContent = "失败：" + e.message; }
+    }
+
+    async function exportPaper(format = "md") {
+      const topic = document.getElementById("wtopic").value.trim();
+      if (!topic) { alert("请先输入主题"); return; }
+      const sections = wOutline.map(s => ({ title: s.title, content: wDrafts[s.id] || "" }));
+      try {
+        const resp = await fetch("/api/writing/export", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ topic, paper_type: document.getElementById("wtype").value, sections, format }),
+        });
+        if (!resp.ok) { alert("导出失败：" + (await resp.text()).slice(0, 100)); return; }
+        const blob = await resp.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = topic.slice(0, 40).replace(/[\\/:*?"<>|]/g, "_") + "." + format;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (e) { alert("导出失败：" + e.message); }
+    }
+
+    // 复制回答全文（含 Markdown）
+    async function copyAnswerText(text) {
+      if (!text) { alert("无可复制内容"); return; }
+      try {
+        await navigator.clipboard.writeText(text);
+        alert("✅ 已复制回答全文");
+      } catch (e) {
+        // 剪贴板 API 不可用（非 https/沙箱）时回退到 textarea 选中复制
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); alert("✅ 已复制回答全文"); }
+        catch (e2) { alert("复制失败：" + e2.message); }
+        ta.remove();
+      }
+    }
+
+    // 把 Agent 产出（多 Agent 结论/答案）一键存为概念笔记
+    async function saveAsNote(content) {
+      if (!content || !content.trim()) { alert("内容为空，无法保存"); return; }
+      const title = content.replace(/\s+/g, " ").slice(0, 25) || "Agent 产出";
+      const toKb = confirm("是否同时存入知识库？\n确定=笔记入库可被检索（推荐）\n取消=仅保存为笔记");
+      try {
+        const resp = await fetch("/api/notes", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ concept: title, note: content, kind: "concept", to_kb: toKb }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) { alert("保存失败：" + (j.detail || j.message || "")); return; }
+        alert(`✅ 已保存为笔记「${j.title}」${toKb && j.kb_saved ? "并已存入知识库，可被检索" : ""}${(j.tags || []).length ? "（标签：" + j.tags.join(", ") + "）" : ""}`);
+      } catch (e) { alert("保存失败：" + e.message); }
+    }
+
+    // 列表预览清理：去掉 markdown 符号（**、反引号、#），避免字面显示
+    function mdClean(t) {
+      return (t || "").replace(/\*\*|__|`|#{1,6}\s?/g, "").replace(/\s+/g, " ").trim();
+    }
+
+    function toggleSessionList() {
+      const list = document.getElementById("sessionList");
+      list.hidden = !list.hidden;
+      // 打开会话记录时隐藏主对话区（避免旧事件卡片/绿色结果残留显示在列表下方）
+      const wrap = document.querySelector(".chatwrap");
+      if (wrap) wrap.style.display = list.hidden ? "" : "none";
+      if (!list.hidden) loadSessionList();
+    }
+
+    // 导出会话为 Markdown
+    async function exportSession(sid) {
+      try {
+        const resp = await fetch(`/api/chat/sessions/${encodeURIComponent(sid)}/export`, { headers: authHeaders() });
+        if (!resp.ok) {
+          const j = await resp.json().catch(() => ({}));
+          alert(j.message || j.detail || "导出失败");
+          return;
+        }
+        const text = await resp.text();
+        const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `会话-${sid.slice(-12)}.md`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // 生成会话只读分享链接
+    async function shareSession(sid) {
+      try {
+        const resp = await fetch(`/api/chat/sessions/${encodeURIComponent(sid)}/share`, {
+          method: "POST",
+          headers: authHeaders(),
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          alert(j.message || j.detail || "生成分享链接失败");
+          return;
+        }
+        const url = `${location.origin}${j.url}`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(url).catch(() => {});
+        }
+        alert(`✅ 只读分享链接已生成（7 天有效）\n\n${url}\n\n已复制到剪贴板`);
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // 重命名会话标题
+    async function renameSession(sid) {
+      const oldTitle = prompt("新的会话标题：", "");
+      if (oldTitle === null || !oldTitle.trim()) return;
+      try {
+        const resp = await fetch(`/api/chat/sessions/${encodeURIComponent(sid)}/rename`, {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ title: oldTitle.trim() }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          alert(j.message || j.detail || "重命名失败");
+          return;
+        }
+        loadSessionList();  // 刷新列表显示新标题
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // 切换到指定会话（从历史加载）
+    async function switchSession(sid) {
+      sessionId = sid;
+      localStorage.setItem("kb_session", sid);
+      document.getElementById("sessionList").hidden = true;
+      log.innerHTML = "";
+      streamingEl = null; streamingBody = null;
+      kbSources = [];
+      await restoreHistory();  // 复用恢复逻辑（sessionId 已设置）
+      document.getElementById("sessionInfo").textContent = `当前会话：${sid.slice(0, 14)}…`;
+    }
+
+    // 新开会话：清空当前对话状态
+    function newChat() {
+      sessionId = null;
+      localStorage.removeItem("kb_session");
+      log.innerHTML = '<div class="hint">发送问题后，Agent 的 plan / thought / action / observation / answer / done 事件会实时出现在这里。多 Agent 模式下还会展示主管委派专家与共享黑板更新。</div>';
+      streamingEl = null; streamingBody = null;
+      kbSources = [];
+      document.getElementById("sessionInfo").textContent = "新会话";
+      document.getElementById("sessionList").hidden = true;
+      input.value = "";
+      input.focus();
+    }
+
+    // ---------- 概念笔记 / 对话总结笔记 ----------
+    // 触发浏览器下载笔记 .md 文件（fetch 带鉴权头 -> blob -> 触发下载）
+    async function downloadNote(slug) {
+      try {
+        const resp = await fetch(`/api/notes/${encodeURIComponent(slug)}/download`, { headers: authHeaders() });
+        if (!resp.ok) { const j = await resp.json(); alert(j.message || "下载失败"); return; }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${slug}.md`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert(`下载失败：${e.message}`);
+      }
+    }
+
+    async function openNoteDialog() {
+      const kind = prompt("选择笔记类型：\n01 概念笔记（把科研概念整理成带标签的笔记）\n02 对话总结笔记（把当前对话总结成带标签的笔记）\n\n输入 01 或 02：", "01");
+      if (!kind || !kind.trim()) return;
+      const isSummary = kind.trim().startsWith("2");
+      if (!isSummary) {
+        const concept = prompt("输入要整理成笔记的科研概念（例如：注意力机制、RAG、过拟合）：");
+        if (!concept || !concept.trim()) return;
+        const note = prompt("（可选）粘贴你搜到的资料或补充说明，留空则仅靠 AI 知识：", "");
+        await createNote({ concept: concept.trim(), note: note || null, kind: "concept" });
+      } else {
+        if (!sessionId) { alert("当前还没有对话内容，请先发一条消息再总结。"); return; }
+        const topic = prompt("给这段对话起个主题名（可选，用于笔记标题，留空则 AI 自动生成）：", "");
+        await createNote({ concept: topic || sessionId, note: null, kind: "summary", session_id: sessionId });
+      }
+    }
+
+    async function createNote(payload) {
+      const status = document.getElementById("uploadStatus");
+      status.textContent = payload.kind === "summary" ? "📝 正在总结对话…" : `📝 正在整理「${payload.concept}」…`;
+      try {
+        const resp = await fetch("/api/notes", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify(payload),
+        });
+        const j = await resp.json();
+        if (!resp.ok) { status.textContent = `❌ ${j.message || "生成失败"}`; return; }
+        status.textContent = `✅ 笔记已保存：${j.title}（标签：${j.tags.join(" / ")}）`;
+        setTimeout(() => { status.textContent = ""; }, 8000);
+        // 在对话区展示笔记内容
+        const resp2 = await fetch(`/api/notes/${encodeURIComponent(j.slug)}`, { headers: authHeaders() });
+        const j2 = await resp2.json();
+        const el = document.createElement("div");
+        el.className = "event b-answer ev";
+        el.innerHTML = `<div class="head"><span class="badge b-answer">📝 ${payload.kind === "summary" ? "对话总结" : "笔记"}</span></div>` +
+          `<div class="body" style="white-space:pre-wrap">${escapeHtml(j2.content || "")}</div>` +
+          `<button class="runbtn" style="background:#475569;margin-top:10px" onclick="downloadNote('${j.slug}')">⬇ 下载到本地</button>`;
+        log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+      } catch (e) {
+        status.textContent = `❌ ${e.message}`;
+      }
+    }
+
+    async function loadNoteList() {
+      const box = document.getElementById("noteListBody");
+      box.innerHTML = "加载中…";
+      try {
+        const resp = await fetch("/api/notes" + (currentNoteTag ? `?tag=${encodeURIComponent(currentNoteTag)}` : ""), { headers: authHeaders() });
+        const j = await resp.json();
+        const notes = j.notes || [];
+        // 标签筛选条
+        let filterHtml = '<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">';
+        filterHtml += `<button class="runbtn" style="background:${!currentNoteTag ? '#2563eb' : '#475569'};padding:3px 10px;font-size:12px" onclick="setNoteTag('')">全部</button>`;
+        for (const t of (j.tags || [])) {
+          filterHtml += `<button class="runbtn" style="background:${currentNoteTag === t ? '#2563eb' : '#475569'};padding:3px 10px;font-size:12px" onclick="setNoteTag('${escapeHtml(t)}')">#${escapeHtml(t)}</button>`;
+        }
+        filterHtml += '</div>';
+        if (!notes.length) { box.innerHTML = filterHtml + (currentNoteTag ? `没有「${escapeHtml(currentNoteTag)}」标签的笔记。` : "还没有笔记。点「📝 概念笔记」把遇到的概念整理存档。"); return; }
+        box.innerHTML = filterHtml + notes.map(n =>
+          `<div class="session-item" onclick="viewNote('${n.slug}')">
+            <span>📄 ${escapeHtml(n.title)}</span>
+            <span class="hint" style="font-size:11px">#${escapeHtml((n.tags || []).join(" #"))}</span>
+            <span class="s-time">${escapeHtml(n.created)}</span>
+          </div>`).join("");
+      } catch (e) {
+        box.innerHTML = `加载失败：${escapeHtml(e.message)}`;
+      }
+    }
+
+    let currentNoteTag = "";  // 当前标签筛选
+    function setNoteTag(tag) {
+      currentNoteTag = tag;
+      loadNoteList();
+    }
+
+    function toggleNoteList() {
+      const list = document.getElementById("noteList");
+      list.hidden = !list.hidden;
+      // 打开笔记列表时同样隐藏主对话区
+      const wrap = document.querySelector(".chatwrap");
+      if (wrap) wrap.style.display = list.hidden ? "" : "none";
+      if (!list.hidden) loadNoteList();
+    }
+
+    async function viewNote(slug) {
+      try {
+        const resp = await fetch(`/api/notes/${encodeURIComponent(slug)}`, { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) { alert(j.message || "查看失败"); return; }
+        const el = document.createElement("div");
+        el.className = "event b-answer ev";
+        el.innerHTML = `<div class="head"><span class="badge b-answer">📄 ${escapeHtml(slug)}</span></div>` +
+          `<div class="body" style="white-space:pre-wrap">${escapeHtml(j.content || "")}</div>` +
+          `<div style="margin-top:10px;display:flex;gap:8px">` +
+          `<button class="runbtn" style="background:#2563eb" onclick="editNote('${slug}')">✏️ 编辑</button>` +
+          `<button class="runbtn" style="background:#475569" onclick="downloadNote('${slug}')">⬇ 下载到本地</button>` +
+          `<button class="runbtn" style="background:#dc2626" onclick="deleteNote('${slug}')">🗑 删除此笔记</button>` +
+          `</div>`;
+        log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // 编辑笔记：prompt 让用户修改 markdown 全文（含 frontmatter），PUT 保存
+    async function editNote(slug) {
+      try {
+        const resp = await fetch(`/api/notes/${encodeURIComponent(slug)}`, { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) { alert(j.message || "加载失败"); return; }
+        const newContent = prompt("编辑笔记内容（markdown，含 --- frontmatter 标题/标签）：", j.content || "");
+        if (newContent === null) return;  // 用户取消
+        const resp2 = await fetch(`/api/notes/${encodeURIComponent(slug)}`, {
+          method: "PUT",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ content: newContent }),
+        });
+        const j2 = await resp2.json();
+        if (!resp2.ok) { alert(j2.message || "保存失败"); return; }
+        alert(`✅ 笔记已更新：${j2.title}`);
+        loadNoteList();  // 刷新列表（标题/标签可能变了）
+        // 重新展示更新后的笔记
+        viewNote(slug);
+      } catch (e) {
+        alert(`编辑失败：${e.message}`);
+      }
+    }
+
+    async function deleteNote(slug) {
+      if (!confirm("确定删除这篇笔记吗？")) return;
+      try {
+        const resp = await fetch(`/api/notes/${encodeURIComponent(slug)}`, { method: "DELETE", headers: authHeaders() });
+        if (!resp.ok) { const j = await resp.json(); alert(j.message || "删除失败"); return; }
+        loadNoteList();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    function renderEvent(ev, alwaysVisible = false) {
+      const type = ev.type || "thought";
+      const meta = META[type] || META.thought;
+      const el = document.createElement("div");
+      el.className = `event ${meta.cls} ev`;
+
+      // 流式规划：逐 token 追加到当前流式卡片（打字机效果，徽章显示「规划中…」）
+      if (type === "plan_stream") {
+        const delta = ev.delta || "";
+        if (!streamingEl) {
+          streamingEl = document.createElement("div");
+          streamingEl.className = "event b-plan ev";
+          streamingEl.innerHTML =
+            `<div class="head"><span class="badge b-plan">规划中…</span></div>` +
+            `<div class="body"><span class="stream-cursor"></span></div>`;
+          streamingBody = streamingEl.querySelector(".body");
+          log.appendChild(streamingEl);
+        }
+        streamingBody.textContent += delta;
+        log.scrollTop = log.scrollHeight;
+        return;
+      }
+
+      if (type === "route") {
+        const routeNames = {
+          direct: "直接回答", single_agent: "单 Agent", plan_execute: "规划执行", multi_agent: "多 Agent"
+        };
+        const tools = (ev.tools || []).length ? (ev.tools || []).join(", ") : "无";
+        el.innerHTML =
+          `<div class="head"><span class="badge ${meta.cls}">${meta.label}</span></div>` +
+          `<div class="body"><b>${escapeHtml(routeNames[ev.route] || ev.route || "-")}</b>` +
+          ` · 意图 ${escapeHtml(ev.intent || "-")} · 置信度 ${Math.round((ev.confidence || 0) * 100)}%` +
+          `<br>工具：${escapeHtml(tools)}<br><span class="hint">${escapeHtml(ev.reason || "")}</span></div>`;
+        log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+        return;
+      }
+
+      if (type === "provider") {
+        const official = ev.channel === "openai_official";
+        const icon = official ? "✅" : (ev.channel === "cc_switch" ? "🔀" : "⚠️");
+        el.innerHTML =
+          `<div class="head"><span class="badge ${meta.cls}">${meta.label}</span></div>` +
+          `<div class="body">${icon} <b>${escapeHtml(ev.label || "未知通道")}</b>` +
+          ` · ${escapeHtml(ev.endpoint || "-")} · 模型 ${escapeHtml(ev.model || "-")}` +
+          `${ev.warning ? `<br><span class="hint">${escapeHtml(ev.warning)}</span>` : ""}</div>`;
+        log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+        return;
+      }
+
+      if (type === "skill") {
+        const matched = ev.matched;
+        el.innerHTML = matched
+          ? `<div class="head"><span class="badge b-plan">SKILL</span></div>` +
+            `<div class="body">🧩 已启用 <b>${escapeHtml(matched.name)}</b>` +
+            `<br><span class="hint">${escapeHtml(matched.description || "")}</span></div>`
+          : `<div class="head"><span class="badge b-thought">SKILL</span></div>` +
+            `<div class="body"><span class="hint">本次任务未匹配专用 Skill，使用通用科研流程。</span></div>`;
+        log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+        return;
+      }
+
+      // 规划完成：把流式卡片收尾为 PLAN（徽章+步骤列表）
+      if (type === "plan") {
+        const stepsHtml = (ev.steps || []).map((s, i) => `${i + 1}. ${escapeHtml(s)}`).join("\n");
+        if (streamingEl) {
+          const badge = streamingEl.querySelector(".badge");
+          if (badge) { badge.textContent = META.plan.label; badge.className = `badge ${META.plan.cls}`; }
+          streamingEl.className = `event ${META.plan.cls} ev`;
+          streamingBody.textContent = stepsHtml || (ev.steps || []).join("\n");
+          streamingEl = null;
+          streamingBody = null;
+        } else {
+          // 无流式前缀（异常路径）：直接渲染步骤卡片
+          el.innerHTML =
+            `<div class="head"><span class="badge ${meta.cls}">${meta.label}</span></div>` +
+            `<div class="body">${stepsHtml}</div>`;
+          log.appendChild(el);
+        }
+        log.scrollTop = log.scrollHeight;
+        return;
+      }
+
+      // 流式输出：逐 token 追加到当前流式卡片（打字机效果）
+      if (type === "stream") {
+        const delta = ev.delta || "";
+        if (!streamingEl) {
+          streamingEl = document.createElement("div");
+          streamingEl.className = "event b-thought ev";  // 初始中性：可能收尾为 THOUGHT 或 ANSWER
+          streamingEl.innerHTML =
+            `<div class="head"><span class="badge b-thought stream-pending">思考中…</span></div>` +
+            `<div class="body"><span class="stream-cursor"></span></div>`;
+          streamingBody = streamingEl.querySelector(".body");
+          log.appendChild(streamingEl);
+        }
+        streamingBody.textContent += delta;
+        log.scrollTop = log.scrollHeight;
+        return;
+      }
+
+      // 思考文本（工具调用前的说明）：若正在流式渲染同一段文本，
+      // 把徽章从「思考中…」改为「THOUGHT」并收尾（避免与后续 thought 事件重复）
+      if (type === "thought" && streamingEl) {
+        const badge = streamingEl.querySelector(".badge");
+        if (badge) { badge.textContent = META.thought.label; badge.className = `badge ${META.thought.cls}`; }
+        streamingEl.className = `event ${META.thought.cls} ev`;
+        streamingEl = null;
+        streamingBody = null;
+        return;
+      }
+
+      // 最终答案：流式结束定稿（若曾有流式输出，更新同一卡片；否则新建）
+      if (type === "answer") {
+        const finalText = ev.content || "";
+        const copyBtn = finalText
+          ? `<button class="runbtn" style="height:auto;padding:3px 12px;font-size:12px;background:#475569" onclick="copyAnswerText(${JSON.stringify(finalText.slice(0, 20000))})">📋 复制</button>`
+          : "";
+        const saveBtn = mode === "multi" && finalText
+          ? `<button class="runbtn" style="height:auto;padding:3px 12px;font-size:12px;background:#475569" onclick="saveAsNote(${JSON.stringify(finalText.slice(0, 4000))})">📌 存为笔记</button>`
+          : "";
+        const actionBar = (copyBtn || saveBtn)
+          ? `<div style="margin-top:8px;display:flex;gap:6px">${copyBtn}${saveBtn}</div>`
+          : "";
+        if (streamingEl) {
+          const badge = streamingEl.querySelector(".badge");
+          if (badge) { badge.textContent = META.answer.label; badge.className = `badge ${META.answer.cls}`; }
+          streamingEl.className = `event ${META.answer.cls} ev`;
+          streamingBody.innerHTML = renderAnswerWithRefs(finalText);  // 流式结束定稿：渲染 Markdown（含 [n] 徽章）
+          streamingEl = null;
+          streamingBody = null;
+          if (actionBar) { el.innerHTML = actionBar; log.appendChild(el); }
+        } else {
+          el.innerHTML =
+            `<div class="head"><span class="badge ${meta.cls}">${meta.label}</span></div>` +
+            `<div class="body">${renderAnswerWithRefs(finalText)}</div>` + actionBar;
+          log.appendChild(el);
+        }
+        log.scrollTop = log.scrollHeight;
+        return;
+      }
+
+      // 答案质量自评：在最后一条 answer 卡片后追加提示徽章
+      if (type === "eval") {
+        const tip = ev.tooltip || "";
+        const conf = ev.confidence || "medium";
+        const confLabel = { high: "高置信度", medium: "中置信度", low: "低置信度" }[conf] || conf;
+        const el2 = document.createElement("div");
+        el2.className = "event b-eval ev";
+        el2.innerHTML =
+          `<div class="head"><span class="badge b-eval">SELF-EVAL</span></div>` +
+          `<div class="body" style="font-size:13px">${escapeHtml(tip)}<span class="hint" style="margin-left:8px">(${confLabel})</span></div>`;
+        log.appendChild(el2);
+        log.scrollTop = log.scrollHeight;
+        return;
+      }
+
+      let body = "";
+      if (type === "action") {
+        let args = ev.arguments || ev.tool_calls;
+        if (typeof args === "object") args = JSON.stringify(args, null, 2);
+        // 工具卡片：名称徽章 + 参数摘要（折叠显示）
+        const argPreview = escapeHtml(String(args || "").slice(0, 120));
+        body =
+          `<div class="tool-card"><span class="tool-chip">🔧 ${escapeHtml(ev.tool || "")}</span>` +
+          `<span class="tool-args">${argPreview}${String(args || "").length > 120 ? "…" : ""}</span></div>`;
+      } else if (type === "observation") {
+        collectSourcesFromObservation(ev.output || "");
+        const dur = ev.duration_ms != null ? ` · <span class="hint">${ev.duration_ms}ms</span>` : "";
+        body = `<div class="tool-result">${escapeHtml(ev.output || "")}${dur}</div>`;
+        if (ev.truncated) body += "\n…[内容已截断]";
+      } else if (type === "step_start") {
+        body = `▶ 步骤 ${escapeHtml(ev.index)}/${escapeHtml(ev.total)}：${escapeHtml(ev.step || "")}`;
+      } else if (type === "step_done") {
+        body = `✔ 步骤 ${escapeHtml(ev.index)} 完成：${escapeHtml(String(ev.result || "").slice(0, 220))}`;
+      } else if (type === "done") {
+        body = `完成 · 迭代 ${ev.iterations ?? "?"} 步` + (ev.reason ? `（原因：${escapeHtml(ev.reason)}）` : "");
+      } else if (type === "delegate") {
+        let extra = "";
+        if (ev.prev) extra += ` · 主链路直传自 <b>${escapeHtml(ev.prev)}</b>`;
+        else if (ev.incoming && ev.incoming.length) extra += ` · 直传：${escapeHtml(ev.incoming.join(" / "))} 的成果`;
+        if (ev.payload) extra += ` · 指令：${escapeHtml(ev.payload)}`;
+        body = `📨 主管委派给 <b>${escapeHtml(ev.to || "")}</b> 专家${extra}`;
+      } else if (type === "chain") {
+        const steps = ev.steps || [];
+        const nodes = [];
+        for (const s of steps) if (s.from) nodes.push(s.from);
+        if (steps.length) nodes.push(steps[steps.length - 1].to);
+        const seq = "START" + nodes.map(n => ` → <b>${escapeHtml(n)}</b>`).join("");
+        body = `🔗 专家链路：${seq}（成品沿链路一路直传）`;
+        renderChainPanel(steps);
+      } else if (type === "worker") {
+        // 专家结论也可能带 [n] 引用（多 Agent 模式）
+        const wText = ev.content || "";
+        body = `【${escapeHtml(ev.agent || "")}】${renderAnswerWithRefs(wText)}` +
+          (wText ? `<div style="margin-top:8px"><button class="runbtn" style="height:auto;padding:3px 12px;font-size:12px;background:#475569" onclick="saveAsNote(${JSON.stringify(wText.slice(0, 4000))})">📌 存为笔记</button></div>` : "");
+      } else if (type === "blackboard") {
+        const ups = ev.updates || {};
+        const lines = Object.entries(ups)
+          .map(([k, v]) => `<b>${escapeHtml(k)}</b>: ${escapeHtml(v)}`).join("<br>");
+        body = `黑板更新（${escapeHtml(ev.agent || "")}）：<br>${lines}`;
+        renderBlackboard(ev.full || {});
+      } else if (type === "needs_user_input") {
+        body = `<b>${escapeHtml(ev.message || "需要补充信息")}</b>` +
+          `<div style="margin-top:6px;color:var(--muted)">任务已暂停在 ${escapeHtml(ev.resume_point || "当前步骤")}。` +
+          `请在输入框补充资料后发送，系统将从这里继续。</div>`;
+      } else if (type === "resumed") {
+        body = `已从第 ${escapeHtml(String(ev.step_index || "?"))} 步继续执行。`;
+      } else if (type === "paused") {
+        body = "等待用户补充信息。";
+      } else {
+        body = escapeHtml(ev.content || ev.message || ev.output || JSON.stringify(ev));
+      }
+
+      el.innerHTML =
+        `<div class="head"><span class="badge ${meta.cls}">${meta.label}</span></div>` +
+        `<div class="body">${body}</div>`;
+
+      // 折叠策略：运行中所有事件实时显示（边输出边滚动，同 DeepSeek 网页版）；
+      // 过程事件（非 answer/done/error）打上 proc-ev 标记，done 到达后统一折叠
+      const PROC_TYPES = new Set(["plan", "thought", "action", "observation", "step_start", "step_done", "delegate", "chain", "worker", "blackboard"]);
+      if (PROC_TYPES.has(type) && !alwaysVisible) {
+        el.classList.add("proc-ev");
+      }
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      trimLog();
+
+      if (type === "done" || type === "error" || type === "paused") {
+        foldProcEvents();
+        unlock();
+      }
+    }
+
+    // 长会话 DOM 裁剪：只保留最近 MAX_EVENTS 条事件，避免节点爆炸卡顿
+    const MAX_EVENTS = 200;
+    function trimLog() {
+      while (log.children.length > MAX_EVENTS) {
+        const first = log.firstElementChild;
+        if (first === streamingEl) break;  // 不裁剪正在流式输出的卡片
+        first.remove();
+      }
+    }
+
+    function renderBlackboard(full) {
+      const aside = document.getElementById("blackboard");
+      const c = document.getElementById("bb-content");
+      const entries = Object.entries(full || {});
+      if (!entries.length) return;
+      aside.classList.remove("hidden");
+      c.innerHTML = entries.map(([k, v]) =>
+        `<div class="bb-item"><div class="bb-key">${escapeHtml(k)}</div><div class="bb-val">${escapeHtml(v)}</div></div>`
+      ).join("");
+    }
+
+    function renderChainPanel(steps) {
+      const aside = document.getElementById("blackboard");
+      const c = document.getElementById("chain-content");
+      if (!steps || !steps.length) return;
+      const nodes = [];
+      for (const s of steps) if (s.from) nodes.push(s.from);
+      nodes.push(steps[steps.length - 1].to);
+      c.innerHTML = "START" + nodes.map(n => ` → <b>${escapeHtml(n)}</b>`).join("");
+      aside.classList.remove("hidden");
+    }
+
+    function unlock() { busy = false; sendBtn.disabled = false; sendBtn.textContent = "发送"; }
+
+    let wsToken = ""; // 发起当前 WS 连接时使用的 token（判断"旧连接误杀"用）
+    let pendingResumeToken = ""; // Plan 模式暂停任务的一次性恢复令牌
+
+    function connect() {
+      clearTimeout(reconnectTimer);
+      wsToken = authToken;
+      const proto = location.protocol === "https:" ? "wss" : "ws";
+      ws = new WebSocket(`${proto}://${location.host}/api/ws/chat?token=${encodeURIComponent(authToken)}`);
+      ws.onopen = () => { if (mode === "react" || mode === "auto") setStatus("on"); };
+      ws.onclose = () => {
+        if (mode === "react" || mode === "auto") setStatus("off");
+        if (authToken) reconnectTimer = setTimeout(connect, 1500); // 已登录才自动重连（未登录重连只会打空 token 错误）
+      };
+      ws.onerror = () => { if (mode === "react" || mode === "auto") setStatus("off"); };
+      ws.onmessage = (e) => {
+        const ev = JSON.parse(e.data);
+        if (ev.type === "stopped") {
+          renderEvent({ type: "error", content: "⏹ 已停止" });
+          showRetryBar();
+          return;
+        }
+        if (ev.type === "error") {
+          renderEvent(ev);
+          if (/登录|过期|UNAUTHORIZED/.test(ev.message || "")) {
+            // 旧连接误杀：连接发起后 token 已换新（如刚登录），用新 token 重连而不是登出
+            if (authToken && wsToken !== authToken) { connect(); return; }
+            logout();
+            return;
+          }
+          showRetryBar();
+          return;
+        }
+        if (ev.type === "needs_user_input") {
+          pendingResumeToken = ev.resume_token || "";
+          input.placeholder = ev.message || "请补充资料后发送，任务将从暂停处继续";
+        } else if (ev.type === "resumed") {
+          pendingResumeToken = "";
+          input.placeholder = "输入科研问题…";
+        }
+        renderEvent(ev);
+      };
+    }
+
+    async function postSSE(url, body, onEvent) {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        let msg = resp.statusText;
+        try { const j = await resp.json(); msg = j.detail || msg; } catch (e) {}
+        renderEvent({ type: "error", content: msg });
+        return;
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        buf = buf.replace(/\r\n/g, "\n"); // sse-starlette 用 CRLF 分隔事件，统一转 LF
+        let idx;
+        while ((idx = buf.indexOf("\n\n")) >= 0) {
+          const chunk = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          for (const line of chunk.split("\n")) {
+            if (line.startsWith("data:")) {
+              const data = line.slice(5).trim();
+              if (data && data !== "[DONE]") {
+                try { onEvent(JSON.parse(data)); } catch (e) {}
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function send() {
+      const text = input.value.trim();
+      // 忙碌中：按钮变为「停止」，点击发送停止信号
+      if (busy) {
+        if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "stop" }));
+        return;
+      }
+      if (!text || busy) return;
+      if (text.length > 8000) {
+        renderEvent({ type: "error", content: "输入过长（上限 8000 字），请精简后重试" });
+        return;
+      }
+      lastChat = {
+        text: text,
+        mode: mode,
+        useWeb: document.getElementById("useWeb").checked,
+        kbName: document.getElementById("kbSelect").value,
+        model: document.getElementById("modelSelect").value,
+        image: pendingImage,
+        skill: document.getElementById("skillSelect").value,
+      };
+      doSend(text, lastChat);
+      input.value = "";
+      clearImage(); // 发送后清预览（lastChat 已保留 image 副本供重试）
+    }
+
+    let lastChat = null; // 最近一次提问（重试/继续用）
+    let pendingImage = null; // 当前待发送的图片 data URL（压缩后）
+
+    // 传图：canvas 压缩（最长边 1280px / JPEG 0.82）→ 预览，发送时随消息携带
+    function handleImageSelect(file) {
+      if (!file) return;
+      if (!file.type.startsWith("image/")) { alert("请选择图片文件"); return; }
+      if (file.size > 20 * 1024 * 1024) { alert("图片过大（上限 20MB）"); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1280;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            const s = MAX / Math.max(w, h);
+            w = Math.round(w * s); h = Math.round(h * s);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          pendingImage = canvas.toDataURL("image/jpeg", 0.82);
+          document.getElementById("imgPreviewThumb").src = pendingImage;
+          document.getElementById("imgPreview").style.display = "inline-flex";
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearImage() {
+      pendingImage = null;
+      document.getElementById("imgPreview").style.display = "none";
+      document.getElementById("imgInput").value = "";
+    }
+
+    function doSend(text, opts) {
+      busy = true;
+      sendBtn.disabled = false; // 忙碌中保持可点击：按钮变为「停止」
+      sendBtn.textContent = "⏹ 停止";
+      renderEvent({ type: "thought", content: "▸ " + text }, true);  // 用户提问始终可见
+      if (!sessionId) {
+        sessionId = "demo-" + Math.random().toString(36).slice(2, 9);
+        localStorage.setItem("kb_session", sessionId);  // 持久化会话：刷新后恢复
+      }
+      if (!ws || ws.readyState !== 1) {
+        renderEvent({ type: "error", content: "WebSocket 未连接，请稍候" });
+        unlock();
+        return;
+      }
+      ws.send(JSON.stringify({
+        type: (opts.mode === "plan" && pendingResumeToken) ? "resume" : "chat",
+        mode: opts.mode,
+        session_id: sessionId,
+        message: text,
+        use_plan: true, // ReAct 模式固定带轻量规划提示；「先规划后执行」是独立的强制分步模式
+        use_web: opts.useWeb,
+        kb_name: opts.kbName, // ""=默认库 "none"=不使用
+        model: opts.model, // 用户自选模型（空=默认）
+        image: opts.image || null, // 多模态：随消息携带图片（data URL）
+        skill: opts.skill || "auto", // 本地 Skill：自动匹配或手动指定
+        resume_token: (opts.mode === "plan" && pendingResumeToken) ? pendingResumeToken : null,
+      }));
+    }
+
+    // 重试：后端清掉半成品回答后，重发上一次提问（保留原模式/联网/知识库/模型选项）
+    async function retryLast() {
+      if (busy || !lastChat) return;
+      try {
+        await fetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}/retry`, {
+          method: "POST",
+          headers: authHeaders(),
+        });
+      } catch (e) { /* 截断失败也继续重发 */ }
+      doSend(lastChat.text, lastChat);
+    }
+
+    // 继续：基于当前会话上下文让 Agent 接着完成（新起一条 user 消息「请继续」）
+    function continueChat() {
+      if (busy || !sessionId) return;
+      const opts = lastChat || {
+        mode: mode,
+        useWeb: document.getElementById("useWeb").checked,
+        kbName: document.getElementById("kbSelect").value,
+        model: document.getElementById("modelSelect").value,
+      };
+      doSend("请继续", opts);
+    }
+
+    // 失败/停止后显示操作条（↻ 重试 / ▶ 继续）
+    function showRetryBar() {
+      document.querySelectorAll(".retry-bar").forEach(el => el.remove());
+      if (!lastChat && !sessionId) return;
+      const bar = document.createElement("div");
+      bar.className = "event b-error ev retry-bar";
+      bar.innerHTML = `<div class="body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="runbtn" onclick="retryLast()" style="padding:5px 14px;height:auto">↻ 重试</button>
+        <button class="runbtn" style="background:#475569;padding:5px 14px;height:auto" onclick="continueChat()">▶ 继续</button>
+        <span class="hint">重试会重新执行上一次提问；继续则基于当前上下文接着回答</span>
+      </div>`;
+      log.appendChild(bar);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function updateModeInfo(m) {
+      document.querySelectorAll(".modebar button").forEach(b =>
+        b.classList.toggle("active", b.dataset.mode === m));
+    }
+
+    function setMode(m) {
+      mode = m;
+      kbSources = [];  // 切模式时清空引用来源
+      document.querySelectorAll(".modebar button").forEach(b =>
+        b.classList.toggle("active", b.dataset.mode === m));
+      updateModeInfo(m);
+      log.innerHTML = "";
+      document.getElementById("blackboard").classList.add("hidden");
+      document.getElementById("bb-content").innerHTML = "";
+      // 三种模式统一走 WebSocket（react/plan/multi），切模式时保持连接
+      if (!ws || ws.readyState > 1) connect();
+      setModeStatus(m);
+    }
+
+    function showTab(name) {
+      document.querySelectorAll(".tabbtn").forEach(b =>
+        b.classList.toggle("active", b.dataset.tab === name));
+      document.getElementById("tab-chat").hidden = name !== "chat";
+      document.getElementById("tab-mykb").hidden = name !== "mykb";
+      document.getElementById("tab-writing").hidden = name !== "writing";
+      document.getElementById("tab-students").hidden = name !== "students";
+      document.getElementById("tab-dashboard").hidden = name !== "dashboard";
+      document.getElementById("tab-kg").hidden = name !== "kg";
+      document.getElementById("tab-skills").hidden = name !== "skills";
+      if (name === "students") loadStudents();
+      if (name === "mykb") loadMyKb();
+      if (name === "dashboard") loadDashboard();
+      if (name === "kg") kgLoad();
+      if (name === "skills") loadSkills();
+      // 记住当前 Tab：刷新后恢复，不跳回对话页
+      localStorage.setItem("current_tab", name);
+    }
+
+    // 刷新后恢复上次停留的 Tab（校验当前角色是否有权访问，无权则回退对话页）
+    function restoreTab() {
+      const saved = localStorage.getItem("current_tab");
+      const loggedIn = !!authToken;
+      const isAdmin = loggedIn && authRole === "admin";
+      const allowed = {
+        chat: true,
+        mykb: loggedIn,
+        writing: loggedIn,
+        kg: loggedIn,
+        skills: loggedIn,
+        students: isAdmin,
+        dashboard: isAdmin,
+      };
+      if (saved && allowed[saved]) {
+        showTab(saved);
+        return;
+      }
+      showTab("chat");
+    }
+
+    // ---------- 我的知识库（多库管理） ----------
+
+    async function loadSkills() {
+      const select = document.getElementById("skillSelect");
+      const list = document.getElementById("skillList");
+      const status = document.getElementById("skillStatus");
+      if (!authToken || !select) return;
+      const previous = select.value || "auto";
+      try {
+        const resp = await fetch("/api/skills", { headers: authHeaders() });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || "加载失败");
+        const skills = data.skills || [];
+        select.innerHTML = '<option value="auto">🧩 Skill：自动匹配</option>' +
+          skills.filter(s => s.enabled && s.valid).map(s =>
+            `<option value="${escapeHtml(s.name)}">🧩 ${escapeHtml(s.name)}</option>`
+          ).join("");
+        select.value = [...select.options].some(o => o.value === previous) ? previous : "auto";
+        status.textContent = `已加载 ${skills.length} 个 Skill`;
+        if (list) {
+          list.innerHTML = skills.map(s => {
+            const state = s.valid ? (s.enabled ? "已启用" : "已停用") : "配置错误";
+            const color = !s.valid ? "#dc2626" : (s.enabled ? "#059669" : "#64748b");
+            const adminButton = authRole === "admin" && s.valid
+              ? `<button class="runbtn" style="height:auto;padding:4px 10px;background:${s.enabled ? "#dc2626" : "#059669"}" onclick="setSkillEnabled('${escapeHtml(s.name)}', ${!s.enabled})">${s.enabled ? "停用" : "启用"}</button>`
+              : "";
+            return `<div style="padding:12px 4px;border-bottom:1px solid var(--border)">
+              <div style="display:flex;gap:8px;align-items:center"><b>${escapeHtml(s.name)}</b>
+              <span style="font-size:11px;color:${color}">${state}</span>${adminButton}</div>
+              <div class="hint" style="margin-top:5px">${escapeHtml(s.description || "")}</div>
+              <div class="hint" style="margin-top:4px;font-size:11px">触发词：${escapeHtml((s.triggers || []).join("、") || "无")} · 工具：${escapeHtml((s.tools || []).join(", ") || "无")}</div>
+              ${(s.errors || []).length ? `<div style="color:#dc2626;font-size:11px;margin-top:4px">${escapeHtml(s.errors.join("；"))}</div>` : ""}
+            </div>`;
+          }).join("") || '<span class="hint">未发现 Skill，请在项目 skills/ 目录添加 SKILL.md。</span>';
+        }
+      } catch (e) {
+        status.textContent = "Skill 加载失败：" + e.message;
+      }
+    }
+
+    async function setSkillEnabled(name, enabled) {
+      const resp = await fetch(`/api/skills/${encodeURIComponent(name)}/enabled`, {
+        method: "PUT",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ enabled }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json(); alert(data.detail || "操作失败"); return;
+      }
+      loadSkills();
+    }
+
+    async function reloadSkills() {
+      const resp = await fetch("/api/skills/reload", { method: "POST", headers: authHeaders() });
+      if (!resp.ok) {
+        const data = await resp.json(); alert(data.detail || "重载失败"); return;
+      }
+      loadSkills();
+    }
+
+    // 加载可用模型列表（用户自选）+ 展示当前模型消费
+    async function loadModelOptions() {
+      const sel = document.getElementById("modelSelect");
+      if (!sel) return;
+      try {
+        const resp = await fetch("/api/llm/models", { headers: authHeaders() });
+        if (!resp.ok) return;
+        const j = await resp.json();
+        const prev = sel.value;
+        const models = j.models || [];
+        sel.innerHTML = models.map(m =>
+          `<option value="${escapeHtml(m)}">🧠 ${escapeHtml(m)}</option>`).join("");
+        // 保持上次选择；无则用默认模型
+        if (models.includes(prev)) sel.value = prev;
+        else if (models.includes(j.default)) sel.value = j.default;
+        refreshModelCost();
+      } catch (e) { /* 服务不可用时下拉为空，对话不阻塞 */ }
+    }
+
+    // 显示当前选中模型的消费（请求数/token/成本，来自全局账本）
+    async function refreshModelCost() {
+      const el = document.getElementById("modelCost");
+      const sel = document.getElementById("modelSelect");
+      if (!el || !sel) return;
+      const model = sel.value;
+      if (!model) { el.textContent = ""; return; }
+      try {
+        const resp = await fetch("/api/llm/usage", { headers: authHeaders() });
+        if (!resp.ok) { el.textContent = ""; return; }
+        const j = await resp.json();
+        const b = (j.by_model || {})[model];
+        if (!b) { el.textContent = "0 请求"; return; }
+        el.textContent = `${b.requests} 次 · ${(b.total || 0).toLocaleString()} tok · $${(b.cost || 0).toFixed(4)}`;
+      } catch (e) { el.textContent = ""; }
+    }
+
+    // 填充对话输入框旁的知识库下拉（不使用/默认库/各命名库）
+    async function loadKbOptions() {
+      const sel = document.getElementById("kbSelect");
+      if (!sel) return;
+      try {
+        const resp = await fetch("/api/userkb/libraries", { headers: authHeaders() });
+        if (!resp.ok) return;
+        const j = await resp.json();
+        const prev = sel.value;
+        const opts = [
+          { v: "none", label: "🚫 不使用知识库" },
+          { v: "", label: "📚 默认库" },
+          ...j.libraries.filter(l => !l.is_default).map(l => ({ v: l.name, label: `📂 ${l.name}` })),
+        ];
+        sel.innerHTML = opts.map(o => `<option value="${escapeHtml(o.v)}">${escapeHtml(o.label)}</option>`).join("");
+        // 保持用户上次选择（刷新时不变）
+        if (opts.some(o => o.v === prev)) sel.value = prev;
+        else sel.value = "";
+        currentKb = sel.value;
+      } catch (e) { /* 服务不可用时保持下拉为空，对话不阻塞 */ }
+    }
+
+    async function loadMyKb() {
+      const box = document.getElementById("myKbList");
+      const libBox = document.getElementById("myKbLibraries");
+      box.innerHTML = '<div class="hint">加载中…</div>';
+      try {
+        // 1) 库列表（默认库 + 命名库）渲染为可点击标签
+        const respLib = await fetch("/api/userkb/libraries", { headers: authHeaders() });
+        const jLib = respLib.ok ? await respLib.json() : { libraries: [] };
+        if (!jLib.libraries.length) {
+          libBox.innerHTML = '<span class="hint">还没有知识库。点「➕ 新建知识库」创建专属文献库，或直接上传文件到默认库。</span>';
+        } else {
+          libBox.innerHTML = jLib.libraries.map(l => {
+            const label = l.is_default ? "📚 默认库" : `📂 ${l.name}`;
+            const active = (currentKb || "") === (l.is_default ? "" : l.name);
+            const actions = l.is_default ? "" :
+              `<button class="kb-del" title="重命名" onclick="renameLibrary('${escapeHtml(l.name)}')">✎</button>
+               <button class="kb-del" title="删除该知识库" onclick="deleteLibrary('${escapeHtml(l.name)}')">✕</button>`;
+            return `<span class="kb-tag ${active ? 'active' : ''}" onclick="selectKb('${l.is_default ? '' : escapeHtml(l.name)}')">
+                ${escapeHtml(label)} · ${l.documents} 文档 ${actions}
+              </span>`;
+          }).join("");
+        }
+        // 2) 当前库的文档列表
+        const params = currentKb ? `?kb_name=${encodeURIComponent(currentKb)}` : "";
+        const resp = await fetch(`/api/userkb/documents${params}`, { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) {
+          box.innerHTML = `<div class="event b-error ev"><div class="body">${escapeHtml(j.message || j.detail || "失败")}</div></div>`;
+          return;
+        }
+        document.getElementById("myKbCount").textContent = j.documents.length;
+        document.getElementById("myKbChunks").textContent = j.total_chunks;
+        if (!j.documents.length) {
+          box.innerHTML = `<div class="hint">「${currentKb ? escapeHtml(currentKb) : "默认库"}」还没有文件。回到「对话演示」，选好知识库后点「⬆ 上传文件」添加你的资料。</div>`;
+          return;
+        }
+        box.innerHTML = j.documents.map(d =>
+          `<div class="student-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <b>📄 ${escapeHtml(d.source)}</b>
+              <span class="hint">${d.chunks} 片段</span>
+              <button class="runbtn" style="background:#dc2626;margin-left:auto;padding:4px 10px;font-size:12px" onclick="deleteMyKbDoc('${escapeHtml(d.doc_id)}')">删除</button>
+            </div>
+            ${d.summary ? `<div class="hint" style="margin-top:6px;font-size:12px;color:var(--primary)">📝 ${escapeHtml(d.summary)}</div>` : ""}
+            <div class="hint" style="margin-top:6px;font-size:12px">${escapeHtml(d.text)}</div>
+          </div>`).join("");
+      } catch (e) {
+        box.innerHTML = `<div class="event b-error ev"><div class="body">${escapeHtml(e.message)}</div></div>`;
+      }
+    }
+
+    // 切换当前查看/对话使用的知识库（""=默认库；"none"=不使用）
+    function selectKb(name) {
+      currentKb = name || "";
+      const sel = document.getElementById("kbSelect");
+      if (sel) sel.value = currentKb || (currentKb === "" ? "" : "none");
+      loadMyKb();
+      loadKbOptions();  // 重新拉库列表（文档数可能变化）
+    }
+
+    // 模型切换：刷新该模型消费展示
+    function onModelChange() {
+      refreshModelCost();
+    }
+
+    async function createLibrary() {
+      const name = prompt("新知识库名称（中文/字母/数字/下划线/短横线，1-30 字符）：", "");
+      if (name === null) return;
+      try {
+        const resp = await fetch("/api/userkb/libraries", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ name }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          alert(j.message || j.detail || "创建失败");
+          return;
+        }
+        currentKb = j.name;
+        loadKbOptions();
+        loadMyKb();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    async function deleteLibrary(name) {
+      if (!confirm(`确定删除知识库「${name}」吗？其中所有文档将一并删除，无法恢复。`)) return;
+      try {
+        const resp = await fetch(`/api/userkb/libraries/${encodeURIComponent(name)}`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          alert(j.message || j.detail || "删除失败");
+          return;
+        }
+        if (currentKb === name) currentKb = "";
+        loadKbOptions();
+        loadMyKb();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    async function renameLibrary(oldName) {
+      const newName = prompt("新的知识库名称：", oldName);
+      if (!newName || newName === oldName) return;
+      try {
+        const resp = await fetch(`/api/userkb/libraries/${encodeURIComponent(oldName)}/rename`, {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ new_name: newName }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          alert(j.message || j.detail || "重命名失败");
+          return;
+        }
+        if (currentKb === oldName) currentKb = j.name;
+        loadKbOptions();
+        loadMyKb();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    async function deleteMyKbDoc(docId) {
+      if (!confirm("确定删除这个文件吗？删除后对话将无法再检索到它。")) return;
+      try {
+        const params = currentKb ? `?kb_name=${encodeURIComponent(currentKb)}` : "";
+        const resp = await fetch(`/api/userkb/documents/${encodeURIComponent(docId)}${params}`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+        const j = await resp.json();
+        if (!resp.ok) {
+          alert(j.message || j.detail || "删除失败");
+          return;
+        }
+        loadMyKb();
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // ---------- 学生会话（管理员） ----------
+    let currentStudent = "";
+
+    // ---------- 运营总览（管理员） ----------
+    async function loadDashboard() {
+      const grid = document.getElementById("dashGrid");
+      grid.innerHTML = "加载中…";
+      try {
+        const resp = await fetch("/api/admin/dashboard", { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) { grid.innerHTML = `<span class="hint">${escapeHtml(j.message || "加载失败")}</span>`; return; }
+        const items = [
+          { num: j.total_users, label: "总用户数" },
+          { num: j.student_count, label: "学生数" },
+          { num: j.session_count, label: "会话数" },
+          { num: j.message_count, label: "消息数" },
+          { num: j.note_count, label: "笔记数" },
+          { num: j.kb_documents >= 0 ? j.kb_documents : "—", label: "知识库文档" },
+        ];
+        grid.innerHTML = items.map(it =>
+          `<div class="dash-card"><div class="d-num">${it.num}</div><div class="d-label">${it.label}</div></div>`
+        ).join("");
+        // 用量 / 成本（独立接口，失败不阻塞主卡片）
+        try {
+          const r2 = await fetch("/api/admin/usage", { headers: authHeaders() });
+          const u = await r2.json();
+          if (r2.ok && u) {
+            const usageCards = [
+              { num: u.requests ?? 0, label: "LLM 请求数" },
+              { num: (u.total_tokens ?? 0).toLocaleString(), label: "总 token" },
+              { num: "$" + (u.cost_usd ?? 0).toFixed(4), label: "估算成本 (USD)" },
+            ];
+            grid.innerHTML += usageCards.map(it =>
+              `<div class="dash-card"><div class="d-num" style="color:#0891b2">${it.num}</div><div class="d-label">${it.label}</div></div>`
+            ).join("");
+          }
+        } catch (e) { /* usage 加载失败忽略 */ }
+        // 成本趋势图（独立接口，失败不阻塞主卡片）
+        loadCostTrend();
+        // 检索质量看板（独立接口，失败不阻塞主卡片）
+        loadRetrievalStats();
+        // 内容审计看板（独立接口，失败不阻塞主卡片）
+        loadAudit();
+      } catch (e) {
+        grid.innerHTML = `<span class="hint">加载失败：${escapeHtml(e.message)}</span>`;
+      }
+    }
+
+    // ---------- 成本趋势（近 14 天：按天柱状 + 按学生条形） ----------
+    async function loadCostTrend() {
+      const box = document.getElementById("costTrendBox");
+      box.innerHTML = "加载中…";
+      try {
+        const resp = await fetch("/api/admin/cost-trend?days=14", { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) { box.innerHTML = `<span class="hint">${escapeHtml(j.message || j.detail || "加载失败")}</span>`; return; }
+        const daily = j.daily || [], students = j.by_student || [];
+        if (!daily.length && !students.length) {
+          box.innerHTML = '<span class="hint">暂无 LLM 调用数据（有对话后自动生成）</span>';
+          return;
+        }
+        box.innerHTML = renderDailyChart(daily) + renderStudentChart(students);
+      } catch (e) {
+        box.innerHTML = `加载失败：${escapeHtml(e.message)}`;
+      }
+    }
+
+    // 按天成本柱状图（纯 SVG，零依赖）
+    function renderDailyChart(daily) {
+      const W = 720, H = 170, padB = 24, padT = 20;
+      const max = Math.max(...daily.map(d => d.cost), 1e-6);
+      const n = daily.length;
+      const slot = (W - 20) / Math.max(n, 1);
+      const bw = Math.min(46, slot - 4);
+      let bars = "";
+      daily.forEach((d, i) => {
+        const h = Math.max(2, (d.cost / max) * (H - padB - padT));
+        const x = 10 + i * slot;
+        const y = H - padB - h;
+        bars +=
+          `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="#0891b2"/>` +
+          `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" font-size="10" fill="#0f172a">$${d.cost.toFixed(4)}</text>` +
+          `<text x="${(x + bw / 2).toFixed(1)}" y="${(H - 7).toFixed(1)}" text-anchor="middle" font-size="10" fill="#64748b">${d.date}</text>`;
+      });
+      return `<div style="margin-bottom:6px"><b style="font-size:13px">按天成本（USD）</b></div>
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px">${bars}</svg>`;
+    }
+
+    // 按学生成本条形图
+    function renderStudentChart(students) {
+      if (!students.length) return "";
+      const max = Math.max(...students.map(s => s.cost), 1e-6);
+      const rows = students.map(s => {
+        const w = Math.max(2, (s.cost / max) * 100);
+        return `<div style="display:flex;align-items:center;gap:8px;margin:5px 0">
+          <span style="width:110px;font-size:12px;text-align:right">${escapeHtml(s.username)}</span>
+          <div style="flex:1;background:var(--primary-soft);border-radius:4px;height:16px">
+            <div style="width:${w.toFixed(1)}%;background:linear-gradient(90deg,#4f46e5,#7c3aed);height:16px;border-radius:4px"></div>
+          </div>
+          <span style="width:110px;font-size:12px;color:#475569">$${s.cost.toFixed(4)} · ${s.requests} 次</span>
+        </div>`;
+      }).join("");
+      return `<div style="margin:14px 0 6px"><b style="font-size:13px">按学生成本</b></div>${rows}`;
+    }
+
+    // ---------- 检索质量看板（RAG 命中日志聚合） ----------
+    async function loadRetrievalStats() {
+      const box = document.getElementById("retrievalBox");
+      box.innerHTML = "加载中…";
+      try {
+        const resp = await fetch("/api/admin/retrieval-stats?days=30", { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) { box.innerHTML = `<span class="hint">${escapeHtml(j.message || j.detail || "加载失败")}</span>`; return; }
+        if (!j.total) { box.innerHTML = '<span class="hint">暂无检索数据（有知识库检索后自动生成）</span>'; return; }
+        const pct = v => (v * 100).toFixed(1) + "%";
+        const overview = [
+          { num: j.total, label: "检索次数" },
+          { num: pct(j.fail_rate), label: "失败率" },
+          { num: pct(j.zero_hit_rate), label: "零命中率" },
+          { num: j.avg_duration_ms + "ms", label: "平均耗时" },
+        ].map(it => `<div class="dash-card"><div class="d-num" style="color:#0891b2">${it.num}</div><div class="d-label">${it.label}</div></div>`).join("");
+        const topDocs = (j.top_docs || []).map(d =>
+          `<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+            <span style="width:180px;font-size:12px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(d.source)}">${escapeHtml(d.source)}</span>
+            <div style="flex:1;background:var(--primary-soft);border-radius:4px;height:14px">
+              <div style="width:${Math.max(2, Math.min(100, d.hits / Math.max(j.top_docs[0].hits, 1) * 100)).toFixed(1)}%;background:linear-gradient(90deg,#0d9488,#0891b2);height:14px;border-radius:4px"></div>
+            </div>
+            <span style="width:60px;font-size:12px;color:#475569">${d.hits} 次</span>
+          </div>`).join("") || '<span class="hint">暂无命中记录</span>';
+        const recentRows = (j.recent || []).map(r =>
+          `<div style="display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)">
+            <span style="color:var(--muted);width:90px">${escapeHtml(r.time)}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(r.query)}">${r.success ? "💬" : "✖"} ${escapeHtml(r.query)}</span>
+            <span style="color:var(--muted);width:110px">top=${r.top} · ${r.duration_ms}ms</span>
+          </div>`).join("");
+        box.innerHTML =
+          `<div class="dash-grid">${overview}</div>
+           <div style="margin:14px 0 6px"><b style="font-size:13px">文档命中排行（Top ${(j.top_docs || []).length}）</b></div>${topDocs}
+           <div style="margin:14px 0 6px"><b style="font-size:13px">最近检索</b></div>${recentRows}`;
+      } catch (e) {
+        box.innerHTML = `加载失败：${escapeHtml(e.message)}`;
+      }
+    }
+
+    // ---------- 内容审计看板 ----------
+    async function loadAudit() {
+      const box = document.getElementById("auditBox");
+      box.innerHTML = "加载中…";
+      try {
+        const resp = await fetch("/api/admin/audit?days=30", { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) { box.innerHTML = `<span class="hint">${escapeHtml(j.message || j.detail || "加载失败")}</span>`; return; }
+        if (!j.total) { box.innerHTML = '<span class="hint">暂无审计记录（敏感词/越权事件会自动记录）</span>'; return; }
+        const words = (j.top_words || []).map(w =>
+          `<span style="display:inline-block;margin:2px 4px;padding:2px 10px;background:var(--primary-soft);border-radius:12px;font-size:12px">${escapeHtml(w.word)} × ${w.count}</span>`).join("");
+        const rows = (j.items || []).map(it =>
+          `<div style="display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)">
+            <span style="color:var(--muted);width:90px">${escapeHtml(it.time)}</span>
+            <span style="width:70px">${it.label.startsWith("sensitive") ? "🔴 敏感词" : "⛔ 越权"}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(JSON.stringify(it.detail || {}))}">${escapeHtml((it.detail && (it.detail.word || it.detail.target || it.detail.kind)) || it.label)}</span>
+          </div>`).join("");
+        box.innerHTML =
+          `<div class="dash-grid">
+            <div class="dash-card"><div class="d-num" style="color:#dc2626">${j.sensitive_total}</div><div class="d-label">敏感词命中</div></div>
+            <div class="dash-card"><div class="d-num" style="color:#d97706">${j.total - j.sensitive_total}</div><div class="d-label">越权/其他</div></div>
+            <div class="dash-card"><div class="d-num" style="color:#0891b2">${j.total}</div><div class="d-label">审计总数</div></div>
+          </div>
+          ${words ? `<div style="margin:10px 0 4px"><b style="font-size:13px">敏感词排行</b></div><div>${words}</div>` : ""}
+          <div style="margin:10px 0 4px"><b style="font-size:13px">最近记录</b></div>${rows}`;
+      } catch (e) {
+        box.innerHTML = `加载失败：${escapeHtml(e.message)}`;
+      }
+    }
+
+    // ---------- RAG qrels 检索准确度评测 ----------
+    let retrievalEvalTimer = null;
+
+    async function startRetrievalEval() {
+      const btn = document.getElementById("retrievalEvalBtn");
+      const box = document.getElementById("retrievalEvalBox");
+      btn.disabled = true; btn.textContent = "评测中…";
+      box.innerHTML = '<span class="hint">正在执行选定 qrels 查询，约需几十秒…</span>';
+      const dataset = document.getElementById("retrievalDataset")?.value || "extended";
+      try {
+        const resp = await fetch("/api/admin/retrieval-evaluate?dataset=" + encodeURIComponent(dataset), { method: "POST", headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) { box.textContent = "启动失败：" + (j.detail || ""); btn.disabled = false; btn.textContent = "运行 qrels 评测"; return; }
+        pollRetrievalEval(j.task_id);
+      } catch (e) {
+        box.textContent = "启动失败：" + e.message;
+        btn.disabled = false; btn.textContent = "运行 qrels 评测";
+      }
+    }
+
+    function pollRetrievalEval(taskId) {
+      clearTimeout(retrievalEvalTimer);
+      retrievalEvalTimer = setTimeout(async () => {
+        const btn = document.getElementById("retrievalEvalBtn");
+        const box = document.getElementById("retrievalEvalBox");
+        try {
+          const resp = await fetch("/api/admin/retrieval-evaluate/" + taskId, { headers: authHeaders() });
+          const j = await resp.json();
+          if (j.status === "running") { box.innerHTML = '<span class="hint">评测运行中…</span>'; pollRetrievalEval(taskId); return; }
+          btn.disabled = false; btn.textContent = "运行 qrels 评测";
+          if (j.status === "not_found") { box.textContent = "任务不存在（服务可能已重启）"; return; }
+          const rep = j.report || {};
+          if (rep.error) { box.textContent = "评测失败：" + rep.error; return; }
+          const metrics = (rep.k_list || []).map(k => {
+            const m = (rep.aggregate || {})[String(k)] || {};
+            return `<div class="dash-card"><div class="d-num" style="font-size:18px;color:#0891b2">@${k}</div><div class="d-label">Recall ${(m.recall * 100).toFixed(1)}% · Precision ${(m.precision * 100).toFixed(1)}%</div><div class="d-label">HitRate ${(m.hit_rate * 100).toFixed(1)}% · MRR ${(m.mrr * 100).toFixed(1)}% · nDCG ${(m.ndcg * 100).toFixed(1)}%</div></div>`;
+          }).join("");
+          const rows = (rep.per_query || []).map(r => `<div style="font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)"><b>${escapeHtml(r.query.slice(0, 55))}</b><span class="hint"> → ${(r.retrieved_ids || []).slice(0, 3).map(escapeHtml).join(", ")}</span></div>`).join("");
+          box.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">数据集：${escapeHtml(rep.dataset_name || "当前选择")}；${rep.query_count} 条查询</div><div class="dash-grid">${metrics}</div><div style="margin-top:8px"><b style="font-size:13px">逐查询明细</b></div>${rows}`;
+        } catch (e) { btn.disabled = false; btn.textContent = "运行 qrels 评测"; box.textContent = "查询失败：" + e.message; }
+      }, 3000);
+    }
+
+    // ---------- 评测历史（持久化运行记录 + 最近两次对比） ----------
+    async function loadEvalHistory() {
+      const box = document.getElementById("evalHistoryBox");
+      box.innerHTML = "加载中…";
+      try {
+        const resp = await fetch("/api/admin/evaluation-runs?limit=20", { headers: authHeaders() });
+        const j = await resp.json();
+        if (!j.runs || !j.runs.length) { box.textContent = "暂无评测历史"; return; }
+        const rows = j.runs.map(r => {
+          const t = new Date((r.created_at || 0) * 1000).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+          const agg3 = (r.report && r.report.aggregate && r.report.aggregate["3"]) || {};
+          const agg1 = (r.report && r.report.aggregate && r.report.aggregate["1"]) || {};
+          return `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px dashed var(--border)">
+            <span style="width:90px;color:var(--muted)">${escapeHtml(t)}</span>
+            <span class="badge" style="background:${r.kind === "retrieval" ? "#e0f2fe" : "#fef3c7"};color:#0f172a">${escapeHtml(r.kind)}</span>
+            <span style="width:80px">${escapeHtml(r.dataset || "")}</span>
+            <span style="color:${r.status === "done" ? "#16a34a" : r.status === "failed" ? "#dc2626" : "#d97706"}">${escapeHtml(r.status)}</span>
+            <span class="hint" style="flex:1">@1 R${(agg1.recall * 100 || 0).toFixed(0)}% · @3 R${(agg3.recall * 100 || 0).toFixed(0)}% MRR${(agg3.mrr * 100 || 0).toFixed(0)}% nDCG${(agg3.ndcg * 100 || 0).toFixed(0)}%</span>
+          </div>`;
+        }).join("");
+        // 最近两次 retrieval 评测自动对比
+        const retrievals = j.runs.filter(r => r.kind === "retrieval" && r.status === "done" && r.report && r.report.aggregate);
+        let cmp = "";
+        if (retrievals.length >= 2) {
+          const a = retrievals[0], b = retrievals[1];
+          const am = a.report.aggregate["3"] || {}, bm = b.report.aggregate["3"] || {};
+          const d = (x, y) => (x - y >= 0 ? "+" : "") + (x - y).toFixed(3);
+          cmp = `<div style="margin-top:8px;padding:8px;background:var(--panel-2);border-radius:8px">
+            <b>最近两次对比（@3）</b>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+              <div>${escapeHtml(a.dataset)}：R ${am.recall.toFixed(3)} → ${bm.recall.toFixed(3)}（${d(bm.recall, am.recall)}）</div>
+              <div>MRR ${am.mrr.toFixed(3)} → ${bm.mrr.toFixed(3)}（${d(bm.mrr, am.mrr)}）</div>
+              <div>nDCG ${am.ndcg.toFixed(3)} → ${bm.ndcg.toFixed(3)}（${d(bm.ndcg, am.ndcg)}）</div>
+              <div>Precision ${am.precision.toFixed(3)} → ${bm.precision.toFixed(3)}（${d(bm.precision, am.precision)}）</div>
+            </div>
+          </div>`;
+        }
+        box.innerHTML = rows + cmp;
+      } catch (e) { box.textContent = "加载失败：" + e.message; }
+    }
+
+    // ---------- Golden Set 一键评测（后台任务 + 轮询） ----------
+    let evalTimer = null;
+
+    async function startEval() {
+      const btn = document.getElementById("evalBtn");
+      const box = document.getElementById("evalBox");
+      btn.disabled = true; btn.textContent = "评测中…";
+      box.innerHTML = '<span class="hint">任务已启动，运行中…</span>';
+      try {
+        const resp = await fetch("/api/admin/evaluate", { method: "POST", headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) { box.innerHTML = "启动失败：" + (j.detail || ""); btn.disabled = false; btn.textContent = "一键评测"; return; }
+        pollEval(j.task_id);
+      } catch (e) {
+        box.innerHTML = "启动失败：" + e.message;
+        btn.disabled = false; btn.textContent = "一键评测";
+      }
+    }
+
+    function pollEval(taskId) {
+      clearTimeout(evalTimer);
+      evalTimer = setTimeout(async () => {
+        const btn = document.getElementById("evalBtn");
+        const box = document.getElementById("evalBox");
+        try {
+          const resp = await fetch("/api/admin/evaluate/" + taskId, { headers: authHeaders() });
+          const j = await resp.json();
+          if (j.status === "running") {
+            box.innerHTML = '<span class="hint">评测运行中（约 1-5 分钟），每 5 秒自动刷新…</span>';
+            pollEval(taskId);
+            return;
+          }
+          btn.disabled = false; btn.textContent = "一键评测";
+          if (j.status === "not_found") { box.innerHTML = "任务不存在（服务可能已重启）"; return; }
+          const rep = j.report || {};
+          if (rep.error) { box.innerHTML = "评测失败：" + escapeHtml(rep.error); return; }
+          const rows = (rep.results || []).map(r =>
+            `<div style="display:flex;gap:8px;align-items:center;font-size:12px;padding:4px 0;border-bottom:1px dashed var(--border)">
+              <span>${r.ok ? "✅" : "❌"}</span>
+              <span style="width:70px;color:var(--muted)">${escapeHtml(r.category)}</span>
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(r.question)}">${escapeHtml(r.question)}</span>
+              <span style="color:var(--muted);width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(r.detail)}">${r.ok ? "通过" : escapeHtml((r.detail || "").slice(0, 40))}</span>
+            </div>`).join("");
+          box.innerHTML =
+            `<div class="dash-grid">
+              <div class="dash-card"><div class="d-num" style="color:#16a34a">${rep.passed}/${rep.total}</div><div class="d-label">通过率 ${Math.round((rep.pass_rate || 0) * 100)}%</div></div>
+              <div class="dash-card"><div class="d-num" style="color:${rep.failed ? "#dc2626" : "#16a34a"}">${rep.failed}</div><div class="d-label">失败用例</div></div>
+            </div>${rows}`;
+        } catch (e) {
+          btn.disabled = false; btn.textContent = "一键评测";
+          box.innerHTML = "查询失败：" + escapeHtml(e.message);
+        }
+      }, 5000);
+    }
+
+    // 管理员重置学生密码
+    async function resetStudentPwd(username) {
+      const pwd = prompt(`为「${username}」设置新密码（至少 4 位）：`);
+      if (!pwd || pwd.length < 4) { alert("密码至少 4 位"); return; }
+      if (!confirm(`确认将「${username}」的密码重置为「${pwd}」？`)) return;
+      try {
+        const resp = await fetch(`/api/admin/students/${encodeURIComponent(username)}/reset-password`, {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, authHeaders()),
+          body: JSON.stringify({ new_password: pwd }),
+        });
+        const j = await resp.json();
+        if (!resp.ok) { alert(j.message || j.detail || "重置失败"); return; }
+        alert(`✅ ${j.message}`);
+      } catch (e) {
+        alert(`重置失败：${e.message}`);
+      }
+    }
+
+    async function loadStudents() {
+      const box = document.getElementById("studentsList");
+      box.innerHTML = '<div class="hint">加载中…</div>';
+      document.getElementById("sessionsCard").hidden = true;
+      document.getElementById("detailCard").hidden = true;
+      try {
+        const resp = await fetch("/api/admin/students", { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) {
+          box.innerHTML = `<div class="event b-error ev"><div class="body">${escapeHtml(j.message || j.detail || "失败")}</div></div>`;
+          return;
+        }
+        if (!j.length) {
+          box.innerHTML = '<div class="hint">暂无学生账号</div>';
+          return;
+        }
+        box.innerHTML = j.map(s =>
+          `<div class="student-row" onclick="loadSessions('${escapeHtml(s.username)}')">
+            <b>${escapeHtml(s.username)}</b>
+            <span class="hint">${s.session_count} 个会话</span>
+            <span style="float:right">
+              <button class="runbtn" style="background:#475569;padding:2px 10px;font-size:12px" onclick="event.stopPropagation();resetStudentPwd('${escapeHtml(s.username)}')">🔑 重置密码</button>
+              <span class="hint">查看 →</span>
+            </span>
+          </div>`).join("");
+      } catch (e) {
+        box.innerHTML = `<div class="event b-error ev"><div class="body">${escapeHtml(e.message)}</div></div>`;
+      }
+    }
+
+    async function loadSessions(username) {
+      currentStudent = username;
+      document.getElementById("sessionsTitle").textContent = `${username} · 会话列表`;
+      document.getElementById("sessionsCard").hidden = false;
+      document.getElementById("detailCard").hidden = true;
+      const box = document.getElementById("sessionsList");
+      box.innerHTML = '<div class="hint">加载中…</div>';
+      try {
+        const resp = await fetch(`/api/admin/students/${encodeURIComponent(username)}/sessions`, { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) {
+          box.innerHTML = `<div class="event b-error ev"><div class="body">${escapeHtml(j.message || j.detail || "失败")}</div></div>`;
+          return;
+        }
+        if (!j.length) {
+          box.innerHTML = '<div class="hint">该学生暂无对话</div>';
+          return;
+        }
+        box.innerHTML = j.map(s =>
+          `<div class="student-row" onclick="loadDetail('${encodeURIComponent(s.session_id)}')">
+            <b>${escapeHtml(s.session_id.replace(/^[^_]*__/, "").slice(0, 18))}</b>
+            <span class="hint">${s.message_count} 条消息</span>
+            <div class="hint" style="margin-top:4px">${escapeHtml(mdClean(s.last_message))}</div>
+          </div>`).join("");
+      } catch (e) {
+        box.innerHTML = `<div class="event b-error ev"><div class="body">${escapeHtml(e.message)}</div></div>`;
+      }
+    }
+
+    async function loadDetail(sessionId) {
+      document.getElementById("detailTitle").textContent = `对话记录 · ${sessionId.replace(/^[^_]*__/, "").slice(0, 18)}`;
+      document.getElementById("detailCard").hidden = false;
+      const box = document.getElementById("detailContent");
+      box.innerHTML = '<div class="hint">加载中…</div>';
+      try {
+        const resp = await fetch(`/api/admin/students/${encodeURIComponent(currentStudent)}/sessions/${encodeURIComponent(sessionId)}`, { headers: authHeaders() });
+        const j = await resp.json();
+        if (!resp.ok) {
+          box.innerHTML = `<div class="event b-error ev"><div class="body">${escapeHtml(j.message || j.detail || "失败")}</div></div>`;
+          return;
+        }
+        const msgs = j.messages || [];
+        if (!msgs.length) { box.innerHTML = '<div class="hint">空会话</div>'; return; }
+        box.innerHTML = msgs.map(m => {
+          const cls = m.role === "user" ? "b-plan" : m.role === "assistant" ? "b-answer" : "b-observation";
+          const label = m.role === "user" ? "USER" : m.role === "assistant" ? "ASSISTANT" : "TOOL";
+          const content = m.content || (m.tool_calls ? JSON.stringify(m.tool_calls).slice(0, 200) : "");
+          return `<div class="event ${cls} ev"><div class="body"><b>${label}</b><br>${escapeHtml(content)}</div></div>`;
+        }).join("");
+      } catch (e) {
+        box.innerHTML = `<div class="event b-error ev"><div class="body">${escapeHtml(e.message)}</div></div>`;
+      }
+    }
+
+    function backToStudents() {
+      document.getElementById("sessionsCard").hidden = true;
+      document.getElementById("detailCard").hidden = true;
+      loadStudents();
+    }
+
+    function backToSessions() {
+      document.getElementById("detailCard").hidden = true;
+      if (currentStudent) loadSessions(currentStudent);
+    }
+
+    sendBtn.onclick = send;
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+    document.getElementById("loginBtn").onclick = doLogin;
+    document.getElementById("registerBtn").onclick = doRegister;
+    document.getElementById("loginPass").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); doLogin(); }
+    });
+    document.getElementById("loginPass2").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); doRegister(); }
+    });
+    document.getElementById("kbFileInput").addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) handleKbUpload(f);
+      e.target.value = "";
+    });
+    document.getElementById("imgInput").addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) handleImageSelect(f);
+      e.target.value = "";
+    });
+    document.getElementById("modelSelect").addEventListener("change", onModelChange);
+
+    updateModeInfo("auto");
+    applyAuthUI();
+  </script>
+</body>
+</html>
